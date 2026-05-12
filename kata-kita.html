@@ -6,44 +6,63 @@
 <title>Kata Kita</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(135deg,#1a0a28,#0a1a28);color:#fff;min-height:100vh;user-select:none}
-.top-bar{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:rgba(0,0,0,0.3)}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(135deg,#1a0a28,#0a1a28);color:#fff;min-height:100vh;user-select:none;perspective:1000px}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(30px) scale(0.95)}to{opacity:1;transform:none}}
+@keyframes scaleIn{from{opacity:0;transform:scale(0.8)}to{opacity:1;transform:scale(1)}}
+@keyframes popIn{0%{opacity:0;transform:scale(0)}70%{transform:scale(1.1)}100%{opacity:1;transform:scale(1)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.top-bar{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:rgba(0,0,0,0.3);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);animation:fadeIn 0.4s ease}
 .level-info{font-size:1.1em;font-weight:700;color:#ff9800}
 .score-area{display:flex;gap:10px}
-.score-box{background:rgba(255,152,0,0.12);border:1px solid rgba(255,152,0,0.2);padding:4px 10px;border-radius:10px;text-align:center}
+.score-box{background:rgba(255,152,0,0.12);border:1px solid rgba(255,152,0,0.2);padding:4px 10px;border-radius:10px;text-align:center;transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1)}
+.score-box.bump{animation:popIn 0.3s cubic-bezier(0.34,1.56,0.64,1)}
 .score-label{font-size:0.6em;color:#ffb74d}
 .score-val{font-size:1em;font-weight:800;color:#ff9800}
 .words-found{padding:10px 16px;background:rgba(0,0,0,0.15)}
 .found-words{display:flex;flex-wrap:wrap;gap:6px}
-.found-word{background:rgba(255,152,0,0.15);border:1px solid rgba(255,152,0,0.2);padding:3px 10px;border-radius:12px;font-size:0.75em;color:#ff9800}
+.found-word{background:rgba(255,152,0,0.15);border:1px solid rgba(255,152,0,0.2);padding:3px 10px;border-radius:12px;font-size:0.75em;color:#ff9800;animation:popIn 0.3s cubic-bezier(0.34,1.56,0.64,1)}
 .hidden-word{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);padding:3px 10px;border-radius:12px;font-size:0.75em;color:#555}
 .letters-area{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;padding:20px 16px}
-.letter{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3em;font-weight:800;cursor:pointer;background:rgba(255,152,0,0.1);border:2px solid rgba(255,152,0,0.2);transition:all 0.15s;color:#ff9800}
-.letter:active{transform:scale(0.9)}
-.letter.used{background:rgba(255,152,0,0.3);border-color:#ff9800;color:#fff}
-.letter.empty{background:transparent;border-color:transparent}
+.letter{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3em;font-weight:800;cursor:pointer;background:rgba(255,152,0,0.1);border:2px solid rgba(255,152,0,0.2);transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.2s ease,background 0.2s ease,border-color 0.2s ease;color:#ff9800;transform:translateZ(0);will-change:transform;animation:slideUp 0.4s cubic-bezier(0.34,1.56,0.64,1) both}
+.letter:nth-child(1){animation-delay:0.05s}.letter:nth-child(2){animation-delay:0.08s}.letter:nth-child(3){animation-delay:0.11s}.letter:nth-child(4){animation-delay:0.14s}.letter:nth-child(5){animation-delay:0.17s}.letter:nth-child(6){animation-delay:0.2s}.letter:nth-child(7){animation-delay:0.23s}.letter:nth-child(8){animation-delay:0.26s}
+.letter:hover{transform:translateY(-2px) translateZ(0);box-shadow:0 4px 15px rgba(255,152,0,0.2)}
+.letter:active{transform:scale(0.9) translateZ(0)}
+.letter.used{background:rgba(255,152,0,0.3);border-color:#ff9800;color:#fff;animation:scaleIn 0.2s cubic-bezier(0.34,1.56,0.64,1)}
+.letter.empty{background:transparent;border-color:transparent;animation:none}
 .current-word{min-height:50px;display:flex;align-items:center;justify-content:center;gap:4px;padding:10px}
-.current-letter{font-size:1.5em;font-weight:800;color:#fff;border-bottom:2px solid rgba(255,152,0,0.3);padding:2px 4px;min-width:24px;text-align:center}
-.word-slots{padding:15px 16px;display:flex;flex-direction:column;gap:6px}
-.word-slot{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid rgba(255,255,255,0.05)}
+.current-letter{font-size:1.5em;font-weight:800;color:#fff;border-bottom:2px solid rgba(255,152,0,0.3);padding:2px 4px;min-width:24px;text-align:center;animation:popIn 0.25s cubic-bezier(0.34,1.56,0.64,1)}
+.word-slots{padding:15px 16px;display:flex;flex-direction:column;gap:6px;animation:slideUp 0.5s ease 0.15s both}
+.word-slot{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid rgba(255,255,255,0.05);transition:all 0.25s ease}
+.word-slot.found{background:rgba(76,175,80,0.08);border-color:rgba(76,175,80,0.2)}
 .word-len{font-size:0.7em;color:#888;min-width:30px}
 .word-dashes{display:flex;gap:3px;flex:1}
-.dash{width:20px;height:20px;border-bottom:2px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:0.8em;color:#ff9800}
-.dash.filled{border-color:#ff9800;color:#ff9800}
-.bottom{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;gap:10px;padding:12px;background:rgba(0,0,0,0.3)}
-.action-btn{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#fff;padding:8px 14px;border-radius:16px;font-size:0.75em;cursor:pointer}
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:50;backdrop-filter:blur(5px)}
-.overlay-card{background:rgba(26,10,40,0.95);border:2px solid rgba(255,152,0,0.3);border-radius:20px;padding:28px;text-align:center;max-width:300px;width:90%}
+.dash{width:20px;height:20px;border-bottom:2px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:0.8em;color:#ff9800;transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1)}
+.dash.filled{border-color:#ff9800;color:#ff9800;animation:popIn 0.3s cubic-bezier(0.34,1.56,0.64,1)}
+.bottom{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;gap:10px;padding:12px;background:rgba(0,0,0,0.3);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);animation:slideUp 0.5s ease 0.3s both}
+.action-btn{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#fff;padding:8px 14px;border-radius:16px;font-size:0.75em;cursor:pointer;transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.2s ease,background 0.2s ease}
+.action-btn:hover{background:rgba(255,255,255,0.12);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,0.2)}
+.action-btn:active{transform:scale(0.95)}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:50;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:fadeIn 0.3s ease}
+.overlay-card{background:rgba(26,10,40,0.95);border:2px solid rgba(255,152,0,0.3);border-radius:20px;padding:28px;text-align:center;max-width:300px;width:90%;animation:scaleIn 0.35s cubic-bezier(0.34,1.56,0.64,1);box-shadow:0 20px 60px rgba(0,0,0,0.4),0 0 40px rgba(255,152,0,0.1)}
 .overlay-card h1{margin-bottom:8px}
 .overlay-card p{color:#888;font-size:0.85em;margin:4px 0}
-.btn{background:linear-gradient(135deg,#ff9800,#ff5722);border:none;color:#fff;padding:12px 28px;border-radius:25px;font-size:1em;font-weight:700;cursor:pointer;margin-top:8px}
-.category{font-size:0.8em;color:#ffb74d;margin:5px 0}
-.hint-area{display:flex;justify-content:center;gap:8px;margin:5px 0}
-.hint-btn{background:rgba(255,152,0,0.1);border:1px solid rgba(255,152,0,0.2);color:#ff9800;padding:6px 14px;border-radius:12px;font-size:0.75em;cursor:pointer}
-.hint-btn:disabled{opacity:0.3}
-.blitz-timer{font-size:2em;font-weight:900;color:#ff5252;text-align:center;padding:10px}
-.mode-tabs{display:flex;gap:8px;justify-content:center;padding:8px}
-.mode-tab{padding:6px 14px;border-radius:12px;font-size:0.8em;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#888}
+.btn{background:linear-gradient(135deg,#ff9800,#ff5722);border:none;color:#fff;padding:12px 28px;border-radius:25px;font-size:1em;font-weight:700;cursor:pointer;margin-top:8px;transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.3s ease;box-shadow:0 4px 16px rgba(255,152,0,0.3)}
+.btn:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(255,152,0,0.4)}
+.btn:active{transform:scale(0.95)}
+.category{font-size:0.8em;color:#ffb74d;margin:5px 0;animation:fadeIn 0.5s ease 0.1s both}
+.hint-area{display:flex;justify-content:center;gap:8px;margin:5px 0;animation:fadeIn 0.5s ease 0.25s both}
+.hint-btn{background:rgba(255,152,0,0.1);border:1px solid rgba(255,152,0,0.2);color:#ff9800;padding:6px 14px;border-radius:12px;font-size:0.75em;cursor:pointer;transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1),background 0.2s ease}
+.hint-btn:hover{background:rgba(255,152,0,0.2);transform:translateY(-1px)}
+.hint-btn:active{transform:scale(0.95)}
+.hint-btn:disabled{opacity:0.3;transform:none}
+.blitz-timer{font-size:2em;font-weight:900;color:#ff5252;text-align:center;padding:10px;animation:popIn 0.3s cubic-bezier(0.34,1.56,0.64,1)}
+.mode-tabs{display:flex;gap:8px;justify-content:center;padding:8px;animation:slideUp 0.4s ease both}
+.mode-tab{padding:6px 14px;border-radius:12px;font-size:0.8em;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#888;transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1),background 0.2s ease,border-color 0.2s ease,color 0.2s ease}
+.mode-tab:hover{background:rgba(255,255,255,0.08);transform:translateY(-1px)}
+.mode-tab:active{transform:scale(0.95)}
 .mode-tab.active{background:rgba(255,152,0,0.2);border-color:#ff9800;color:#ff9800}
 </style>
 </head>
