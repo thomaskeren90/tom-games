@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="id"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Kuis Nusantara</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--red:#C62828;--red2:#E53935;--gold:#FFD600;--gold2:#FFA000;--green:#2E7D32;--glass:rgba(255,255,255,0.12);--glass-border:rgba(255,255,255,0.22);}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{background:#1a0303;font-family:'Inter',system-ui,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;overflow:hidden;}
+h1,h2,.home-title,.score-big,.ans-label,.over-title{font-family:'Poppins',sans-serif;}
+#app{width:100%;max-width:400px;height:100vh;max-height:700px;position:relative;overflow:hidden;border-radius:16px;box-shadow:0 32px 80px rgba(0,0,0,.8);}
+
+/* PARTICLES */
+#particles{position:absolute;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+.p{position:absolute;border-radius:50%;opacity:0;animation:floatUp linear infinite;}
+@keyframes floatUp{0%{transform:translateY(110%) scale(0);opacity:0}10%{opacity:.6}85%{opacity:.4}100%{transform:translateY(-20%) scale(1.2);opacity:0}}
+
+/* SCREENS */
+.scr{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;transform:translateX(30px);transition:opacity .3s ease,transform .3s ease;z-index:1;}
+.scr.on{opacity:1;pointer-events:all;transform:translateX(0);}
+.scr.out{transform:translateX(-30px);}
+
+/* RIPPLE */
+.ripple-host{position:relative;overflow:hidden;}
+@keyframes rippleAnim{to{transform:scale(4);opacity:0}}
+.ripple-el{position:absolute;border-radius:50%;background:rgba(255,255,255,.28);width:80px;height:80px;margin:-40px;pointer-events:none;animation:rippleAnim .55s ease-out forwards;}
+
+/* CONFETTI */
+@keyframes confettiFall{0%{transform:translateY(-10px) rotate(0deg);opacity:1}100%{transform:translateY(700px) rotate(720deg);opacity:0}}
+.cf{position:fixed;width:8px;height:8px;z-index:9999;pointer-events:none;animation:confettiFall ease-in forwards;}
+
+/* HOME */
+#s-home{background:linear-gradient(145deg,#5B0000 0%,#B71C1C 45%,#7B0000 100%);overflow-y:auto;}
+.archipelago{position:absolute;bottom:60px;right:-20px;font-size:120px;opacity:.04;pointer-events:none;transform:rotate(-10deg);z-index:0;filter:grayscale(1);}
+.home-inner{position:relative;z-index:1;}
+.home-header{padding:22px 20px 12px;text-align:center;}
+.home-logo{font-size:48px;filter:drop-shadow(0 4px 12px rgba(0,0,0,.4));}
+.home-title{color:var(--gold);font-size:24px;font-weight:900;letter-spacing:1.5px;text-shadow:0 2px 12px rgba(0,0,0,.5);}
+.home-tag{color:rgba(255,255,255,.6);font-size:10px;margin-top:3px;}
+.home-level{background:var(--glass);backdrop-filter:blur(12px);border:1px solid var(--glass-border);border-radius:14px;margin:0 16px 12px;padding:10px 14px;display:flex;align-items:center;gap:10px;}
+.level-badge{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#7B0000;font-family:'Poppins',sans-serif;font-weight:900;font-size:11px;border-radius:8px;padding:4px 10px;white-space:nowrap;box-shadow:0 2px 8px rgba(255,160,0,.4);}
+.xp-wrap{flex:1;}
+.xp-label{color:rgba(255,255,255,.6);font-size:10px;margin-bottom:4px;}
+.xp-bar{height:6px;background:rgba(255,255,255,.15);border-radius:3px;overflow:hidden;}
+.xp-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));border-radius:3px;transition:width .6s ease;box-shadow:0 0 8px rgba(255,214,0,.5);}
+.home-modes{padding:0 16px;display:flex;gap:10px;margin-bottom:12px;}
+.btn-mode{flex:1;border:none;border-radius:14px;padding:12px 8px;font-family:'Poppins',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .15s;position:relative;overflow:hidden;}
+.btn-santai{background:linear-gradient(135deg,#66BB6A,#2E7D32);color:#fff;box-shadow:0 4px 16px rgba(46,125,50,.5);}
+.btn-tantang{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#7B0000;box-shadow:0 4px 16px rgba(255,160,0,.45);}
+.btn-mode.active-mode{transform:scale(1.04);box-shadow:0 6px 22px rgba(0,0,0,.35);}
+.mode-icon{display:block;font-size:20px;margin-bottom:2px;}
+.home-cats{padding:0 16px;margin-bottom:10px;position:relative;z-index:1;}
+.home-cats-title{color:rgba(255,255,255,.5);font-size:10px;margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px;font-family:'Poppins',sans-serif;}
+.cat-chips{display:flex;flex-wrap:wrap;gap:6px;}
+.chip{background:var(--glass);backdrop-filter:blur(8px);color:rgba(255,255,255,.82);border:1px solid var(--glass-border);border-radius:20px;padding:5px 12px;font-size:11px;cursor:pointer;transition:all .2s;user-select:none;}
+.chip.sel{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#7B0000;border-color:var(--gold);font-weight:700;box-shadow:0 2px 10px rgba(255,214,0,.35);}
+.home-start{padding:6px 16px 22px;position:relative;z-index:1;}
+.btn-main{width:100%;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#7B0000;border:none;border-radius:16px;padding:15px;font-family:'Poppins',sans-serif;font-size:17px;font-weight:900;cursor:pointer;box-shadow:0 6px 24px rgba(255,160,0,.5);position:relative;overflow:hidden;transition:transform .15s;}
+.btn-main:active{transform:scale(.98);}
+
+/* GAME */
+#s-game{background:linear-gradient(145deg,#4A0E0E,#8B1A1A 50%,#3D0000);}
+.game-top{background:var(--glass);backdrop-filter:blur(16px);border-bottom:1px solid var(--glass-border);padding:12px 14px 8px;color:#fff;position:relative;}
+.game-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;}
+.q-num{font-size:11px;opacity:.75;font-family:'Poppins',sans-serif;}
+.streak-badge{background:var(--glass);backdrop-filter:blur(8px);border:1px solid var(--glass-border);border-radius:10px;padding:3px 10px;font-size:12px;font-weight:700;font-family:'Poppins',sans-serif;transition:all .3s;}
+.streak-badge.hot{background:linear-gradient(135deg,#FF6D00,#FF8F00);border-color:#FF8F00;box-shadow:0 0 14px rgba(255,109,0,.6);animation:glowPulse 1s ease-in-out infinite;}
+@keyframes glowPulse{0%,100%{box-shadow:0 0 10px rgba(255,109,0,.5)}50%{box-shadow:0 0 22px rgba(255,109,0,.9)}}
+.prog-bar{height:4px;background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));border-radius:2px;transition:width .5s ease;box-shadow:0 0 8px rgba(255,214,0,.6);}
+.timer-wrap{margin-top:6px;height:5px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden;}
+.timer-bar{height:100%;border-radius:3px;transition:background .5s;}
+.cat-tag{margin-top:7px;display:flex;align-items:center;gap:5px;}
+.cat-pill{background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;padding:2px 8px;font-size:10px;font-weight:600;}
+.diff-pill{border-radius:8px;padding:2px 8px;font-size:10px;font-weight:700;font-family:'Poppins',sans-serif;}
+.diff-0{background:rgba(76,175,80,.8);color:#fff;}.diff-1{background:rgba(249,168,37,.85);color:#7B0000;}.diff-2{background:rgba(229,57,53,.85);color:#fff;}.diff-3{background:rgba(106,27,154,.8);color:#fff;}
+.q-card{margin:12px;background:rgba(255,255,255,.1);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:20px;box-shadow:0 8px 32px rgba(0,0,0,.3);flex:1;display:flex;align-items:center;justify-content:center;}
+.q-text{font-family:'Poppins',sans-serif;font-size:16px;font-weight:700;color:#fff;line-height:1.5;text-align:center;text-shadow:0 1px 4px rgba(0,0,0,.3);}
+.opts{padding:0 12px 12px;display:flex;flex-direction:column;gap:8px;}
+.opt{border:1.5px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);backdrop-filter:blur(12px);border-radius:14px;padding:12px 14px;font-family:'Inter',sans-serif;font-size:13.5px;font-weight:600;color:#fff;cursor:pointer;text-align:left;display:flex;align-items:center;gap:9px;transition:all .2s;position:relative;overflow:hidden;}
+.opt:active{transform:scale(.98);}
+.opt:hover{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.4);}
+.opt-key{width:26px;height:26px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0;font-family:'Poppins',sans-serif;}
+.opt.correct{border-color:#66BB6A;background:rgba(76,175,80,.25);color:#fff;pointer-events:none;}
+.opt.correct .opt-key{background:#2E7D32;border-color:#2E7D32;color:#fff;}
+.opt.wrong{border-color:#EF5350;background:rgba(229,57,53,.2);color:#fff;pointer-events:none;}
+.opt.wrong .opt-key{background:#C62828;border-color:#C62828;color:#fff;}
+.opt.dim{opacity:.35;pointer-events:none;}
+#exit-confirm{position:absolute;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:10;display:none;align-items:center;justify-content:center;}
+.exit-card{background:rgba(255,255,255,.12);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:26px;margin:24px;text-align:center;color:#fff;}
+.exit-card p{font-family:'Poppins',sans-serif;font-weight:700;font-size:16px;margin:8px 0 4px;}
+.exit-card small{opacity:.6;font-size:12px;}
+.exit-btns{display:flex;gap:10px;margin-top:18px;}
+.exit-btns button{flex:1;padding:11px;border-radius:12px;font-family:'Poppins',sans-serif;font-weight:700;font-size:13px;cursor:pointer;border:none;}
+
+/* ANSWER */
+#s-ans{background:rgba(0,0,0,.7);backdrop-filter:blur(6px);justify-content:flex-end;}
+.ans-card{background:rgba(20,5,5,.92);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.15);border-top:1px solid rgba(255,255,255,.25);border-radius:24px 24px 0 0;padding:24px;animation:slideUp .32s cubic-bezier(.34,1.56,.64,1);}
+@keyframes slideUp{from{transform:translateY(50px);opacity:0}to{transform:none;opacity:1}}
+.ans-status{text-align:center;margin-bottom:14px;}
+.ans-icon{font-size:44px;display:block;animation:popIn .4s cubic-bezier(.34,1.56,.64,1);}
+@keyframes popIn{from{transform:scale(0)}to{transform:scale(1)}}
+.ans-label{font-family:'Poppins',sans-serif;font-size:22px;font-weight:900;margin-top:6px;color:#fff;}
+.ans-pts{font-size:12px;color:rgba(255,255,255,.55);margin-top:3px;}
+.fact-box{background:rgba(255,214,0,.08);border:1px solid rgba(255,214,0,.25);border-radius:14px;padding:14px;margin-bottom:16px;}
+.fact-title{font-family:'Poppins',sans-serif;font-size:10px;font-weight:700;color:var(--gold2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;}
+.fact-text{font-size:12.5px;color:rgba(255,255,255,.82);line-height:1.6;}
+.btn-next{width:100%;background:linear-gradient(135deg,var(--red),var(--red2));color:#fff;border:none;border-radius:14px;padding:14px;font-family:'Poppins',sans-serif;font-size:15px;font-weight:700;cursor:pointer;position:relative;overflow:hidden;box-shadow:0 4px 16px rgba(198,40,40,.45);}
+
+/* GAMEOVER */
+#s-over{background:linear-gradient(145deg,#5B0000,#B71C1C 50%,#7B0000);}
+.over-scroll{overflow-y:auto;flex:1;padding:24px;}
+.over-title{color:var(--gold);font-size:22px;font-weight:900;text-align:center;margin-bottom:6px;}
+.score-big{color:#fff;font-size:64px;font-weight:900;text-align:center;text-shadow:0 4px 20px rgba(0,0,0,.4);font-family:'Poppins',sans-serif;}
+.score-sub{color:rgba(255,255,255,.5);text-align:center;font-size:11px;margin-bottom:16px;}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.stat-box{background:var(--glass);backdrop-filter:blur(12px);border:1px solid var(--glass-border);border-radius:14px;padding:12px;text-align:center;}
+.stat-val{color:var(--gold);font-family:'Poppins',sans-serif;font-size:22px;font-weight:900;}
+.stat-key{color:rgba(255,255,255,.55);font-size:10px;margin-top:3px;}
+.xp-row{background:rgba(255,214,0,.1);border:1px solid rgba(255,214,0,.22);border-radius:14px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.xp-row span:first-child{color:rgba(255,255,255,.7);font-size:13px;}
+.xp-row span:last-child{color:var(--gold);font-family:'Poppins',sans-serif;font-size:18px;font-weight:900;}
+.newlv-box{background:rgba(255,214,0,.1);border:1px solid rgba(255,214,0,.3);border-radius:14px;padding:12px;text-align:center;margin-bottom:12px;display:none;animation:popIn .4s ease;}
+.over-btns{display:flex;gap:10px;padding:0 22px 22px;}
+.btn-again{flex:1;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#7B0000;border:none;border-radius:14px;padding:14px;font-family:'Poppins',sans-serif;font-size:14px;font-weight:900;cursor:pointer;box-shadow:0 4px 16px rgba(255,160,0,.4);position:relative;overflow:hidden;}
+.btn-home-o{flex:1;background:var(--glass);backdrop-filter:blur(8px);color:#fff;border:1px solid var(--glass-border);border-radius:14px;padding:14px;font-family:'Poppins',sans-serif;font-size:14px;font-weight:700;cursor:pointer;position:relative;overflow:hidden;}
+</style></head><body>
+<div id="app">
+<div id="particles"></div>
+
+<div id="s-home" class="scr">
+  <div class="archipelago">🏝️</div>
+  <div class="home-inner">
+    <div class="home-header">
+      <div class="home-logo">🗺️</div>
+      <div class="home-title">KUIS NUSANTARA</div>
+      <div class="home-tag">Tantang Otakmu, Cintai Indonesiamu! 🇮🇩</div>
+    </div>
+    <div class="home-level">
+      <div class="level-badge" id="lvl-badge">Lv.1 Pemula</div>
+      <div class="xp-wrap">
+        <div class="xp-label">XP: <span id="xp-num">0</span> / <span id="xp-next">100</span></div>
+        <div class="xp-bar"><div class="xp-fill" id="xp-fill" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div class="home-modes">
+      <button class="btn-mode btn-santai ripple-host" id="btn-santai"><span class="mode-icon">😌</span>SANTAI<br><small style="font-weight:400;font-size:10px;">Tanpa batas waktu</small></button>
+      <button class="btn-mode btn-tantang ripple-host" id="btn-tantang"><span class="mode-icon">⏱️</span>TANTANG<br><small style="font-weight:400;font-size:10px;color:#7B0000;">Balap waktu!</small></button>
+    </div>
+    <div class="home-cats">
+      <div class="home-cats-title">Pilih Kategori</div>
+      <div class="cat-chips" id="cat-chips"></div>
+    </div>
+    <div class="home-start">
+      <button class="btn-main ripple-host" id="btn-main">▶ MULAI MAIN</button>
+    </div>
+  </div>
+</div>
+
+<div id="s-game" class="scr">
+  <div class="game-top">
+    <div class="game-meta">
+      <button id="btn-exit" style="background:rgba(255,255,255,.15);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:8px;padding:3px 9px;font-size:11px;cursor:pointer;font-family:'Poppins',sans-serif;">✕ Keluar</button>
+      <span class="q-num" id="q-num">Soal 1/15</span>
+      <span class="streak-badge" id="streak-badge">🔥 0</span>
+    </div>
+    <div id="exit-confirm" style="display:none;">
+      <div class="exit-card">
+        <div style="font-size:28px">⚠️</div>
+        <p>Keluar dari kuis?</p>
+        <small>Progres akan hilang.</small>
+        <div class="exit-btns">
+          <button id="exit-no" style="background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.2);">Lanjut Main</button>
+          <button id="exit-yes" style="background:#C62828;color:#fff;">Keluar</button>
+        </div>
+      </div>
+    </div>
+    <div class="prog-bar"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="timer-wrap" id="timer-wrap" style="display:none"><div class="timer-bar" id="timer-bar" style="width:100%;background:#4CAF50"></div></div>
+    <div class="cat-tag">
+      <span class="cat-pill" id="cat-pill">Budaya</span>
+      <span class="diff-pill diff-0" id="diff-pill">Mudah</span>
+      <span style="color:rgba(255,255,255,.45);font-size:11px;margin-left:auto;font-family:'Poppins',sans-serif;" id="score-top">0 pts</span>
+    </div>
+  </div>
+  <div class="q-card"><div class="q-text" id="q-text">Loading...</div></div>
+  <div class="opts" id="opts"></div>
+</div>
+
+<div id="s-ans" class="scr">
+  <div class="ans-card">
+    <div class="ans-status">
+      <span class="ans-icon" id="ans-icon">✅</span>
+      <div class="ans-label" id="ans-label">BENAR!</div>
+      <div class="ans-pts" id="ans-pts">+20 poin</div>
+    </div>
+    <div class="fact-box">
+      <div class="fact-title">💡 Tahukah Kamu?</div>
+      <div class="fact-text" id="fact-text"></div>
+    </div>
+    <button class="btn-next ripple-host" id="btn-next">Selanjutnya →</button>
+  </div>
+</div>
+
+<div id="s-over" class="scr">
+  <div class="over-scroll">
+    <div class="over-title">🏆 HASIL KUIS</div>
+    <div class="score-big" id="over-score">0</div>
+    <div class="score-sub" id="over-sub">poin</div>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-val" id="st-correct">0</div><div class="stat-key">Benar</div></div>
+      <div class="stat-box"><div class="stat-val" id="st-wrong">0</div><div class="stat-key">Salah</div></div>
+      <div class="stat-box"><div class="stat-val" id="st-streak">0</div><div class="stat-key">Combo Terbaik</div></div>
+      <div class="stat-box"><div class="stat-val" id="st-acc">0%</div><div class="stat-key">Akurasi</div></div>
+    </div>
+    <div class="xp-row"><span>⭐ XP Didapat</span><span id="st-xp">+0 XP</span></div>
+    <div class="newlv-box" id="newlv-box"><div style="font-size:24px">🎉</div><div style="color:var(--gold);font-family:'Poppins',sans-serif;font-weight:900;font-size:15px;" id="newlv-txt">NAIK LEVEL!</div></div>
+  </div>
+  <div class="over-btns">
+    <button class="btn-again ripple-host" id="btn-again">🔄 Main Lagi</button>
+    <button class="btn-home-o ripple-host" id="btn-home-o">🏠 Menu</button>
+  </div>
+</div>
+</div>
+
+<script>
+// ===== QUESTION DATA (unchanged) =====
+const Q=[
+{c:'budaya',d:0,q:'Tari Kecak berasal dari provinsi mana?',o:['Bali','Jawa Tengah','Nusa Tenggara Barat','Sulawesi Selatan'],a:0,f:'Tari Kecak berasal dari Bali. Pertama dipentaskan tahun 1930-an dengan puluhan penari pria berseru "cak cak cak" membentuk lingkaran besar.'},
+{c:'budaya',d:0,q:'Alat musik Angklung berasal dari provinsi?',o:['Jawa Barat','Jawa Tengah','Bali','Sumatera Barat'],a:0,f:'Angklung berasal dari Jawa Barat dan diakui UNESCO sebagai Warisan Budaya Takbenda pada 2010. Terbuat dari bambu dan dimainkan dengan cara digoyangkan.'},
+{c:'budaya',d:0,q:'Batik Indonesia diakui UNESCO pada tahun?',o:['2009','2005','2012','2015'],a:0,f:'UNESCO mengakui Batik sebagai Warisan Budaya Takbenda dari Indonesia pada 2 Oktober 2009. Hari itu kini diperingati sebagai Hari Batik Nasional.'},
+{c:'budaya',d:0,q:'Rumah adat Gadang adalah rumah tradisional suku?',o:['Minangkabau','Batak','Dayak','Toraja'],a:0,f:'Rumah Gadang adalah rumah adat masyarakat Minangkabau di Sumatera Barat. Atapnya melengkung ke atas menyerupai tanduk kerbau.'},
+{c:'budaya',d:1,q:'Tari Saman berasal dari suku mana di Aceh?',o:['Gayo','Alas','Aneuk Jamee','Singkil'],a:0,f:'Tari Saman berasal dari suku Gayo di Aceh Tengah. UNESCO mengakuinya sebagai Warisan Budaya Takbenda pada 2011.'},
+{c:'budaya',d:1,q:'Wayang Kulit paling berkembang di pulau?',o:['Jawa','Bali','Lombok','Madura'],a:0,f:'Wayang Kulit paling berkembang di Jawa dan diakui UNESCO pada 2003. Pertunjukan semalam suntuk dipimpin seorang Dalang.'},
+{c:'budaya',d:1,q:'Kain tradisional khas suku Batak disebut?',o:['Ulos','Songket','Lurik','Poleng'],a:0,f:'Ulos adalah kain tenun sakral suku Batak dari Sumatera Utara. Diberikan dalam upacara adat pernikahan, kelahiran, dan kematian.'},
+{c:'budaya',d:2,q:'Upacara Ngaben adalah tradisi kremasi dari?',o:['Bali','Lombok','Flores','Sulawesi'],a:0,f:'Ngaben adalah upacara kremasi umat Hindu di Bali. Dianggap sebagai ritual penyucian roh dan perayaan kepergian jiwa.'},
+{c:'budaya',d:2,q:'Tari Tor-Tor berasal dari suku?',o:['Batak','Minang','Aceh','Nias'],a:0,f:'Tari Tor-Tor adalah tarian sakral suku Batak dari Sumatera Utara. Dulunya hanya ditampilkan dalam upacara adat.'},
+{c:'budaya',d:2,q:'Songket adalah kain tradisional yang terkenal dari daerah?',o:['Palembang','Yogyakarta','Manado','Banjarmasin'],a:0,f:'Songket dari Palembang ditenun dengan benang emas atau perak. Dahulu hanya boleh dikenakan oleh bangsawan.'},
+{c:'makanan',d:0,q:'Rendang berasal dari daerah?',o:['Padang, Sumatera Barat','Medan','Palembang','Aceh'],a:0,f:'Rendang berasal dari masakan Minangkabau. CNN Travel dua kali menempatkannya sebagai makanan terlezat di dunia (2011 dan 2017).'},
+{c:'makanan',d:0,q:'Makanan khas Yogyakarta yang terkenal adalah?',o:['Gudeg','Pempek','Rendang','Soto Betawi'],a:0,f:'Gudeg adalah makanan khas Yogyakarta berbahan nangka muda dimasak dengan santan. Itulah mengapa Yogyakarta dijuluki Kota Gudeg.'},
+{c:'makanan',d:0,q:'Pempek adalah makanan khas dari kota?',o:['Palembang','Jambi','Lampung','Bengkulu'],a:0,f:'Pempek adalah makanan khas Palembang berbahan ikan dan sagu. Dimakan bersama cuko (kuah cuka pedas manis).'},
+{c:'makanan',d:0,q:'Makanan pokok masyarakat Papua adalah?',o:['Papeda','Sagu bakar','Singkong','Jagung'],a:0,f:'Papeda adalah bubur sagu khas Papua dan Maluku. Disantap bersama ikan kuah kuning yang gurih.'},
+{c:'makanan',d:1,q:'Coto Makassar adalah makanan khas dari provinsi?',o:['Sulawesi Selatan','Sulawesi Tengah','Sulawesi Utara','Gorontalo'],a:0,f:'Coto Makassar adalah sup daging dan jeroan sapi khas Sulawesi Selatan, sudah ada sejak abad ke-16.'},
+{c:'makanan',d:1,q:'Bika Ambon sebenarnya berasal dari kota?',o:['Medan','Ambon','Manado','Pontianak'],a:0,f:'Meskipun bernama Bika Ambon, kue ini sebenarnya berasal dari Medan, Sumatera Utara.'},
+{c:'makanan',d:1,q:'Rawon adalah sup daging berkuah hitam khas dari?',o:['Jawa Timur','Jawa Tengah','Jawa Barat','Bali'],a:0,f:'Rawon adalah masakan khas Jawa Timur. Warna hitam kuahnya berasal dari bumbu kluwek (kepayang).'},
+{c:'makanan',d:2,q:'Soto Banjar adalah kuliner khas dari kota?',o:['Banjarmasin','Surabaya','Makassar','Palembang'],a:0,f:'Soto Banjar khas Kalimantan Selatan menggunakan ayam dengan rempah kayu manis dan cengkeh.'},
+{c:'makanan',d:2,q:'Kerak Telor adalah makanan tradisional khas?',o:['Betawi/Jakarta','Bandung','Semarang','Surabaya'],a:0,f:'Kerak Telor adalah makanan khas Betawi dari beras ketan, telur, serundeng kelapa, dan ebi.'},
+{c:'makanan',d:2,q:'Tinutuan (Bubur Manado) berasal dari?',o:['Sulawesi Utara','Sulawesi Selatan','Maluku','Papua'],a:0,f:'Tinutuan adalah bubur sayur khas Manado berisi bayam, kangkung, dan labu. Sangat bergizi tinggi.'},
+{c:'sejarah',d:0,q:'Proklamasi kemerdekaan Indonesia dibacakan pada tanggal?',o:['17 Agustus 1945','17 Agustus 1944','18 Agustus 1945','1 Juni 1945'],a:0,f:'Proklamasi dibacakan Soekarno pada 17 Agustus 1945 pukul 10.00 WIB di Jalan Pegangsaan Timur 56, Jakarta.'},
+{c:'sejarah',d:0,q:'Sumpah Pemuda dideklarasikan pada tanggal?',o:['28 Oktober 1928','20 Mei 1908','1 Juni 1945','10 November 1945'],a:0,f:'Sumpah Pemuda dicetuskan pada Kongres Pemuda II, 28 Oktober 1928. Menegaskan satu tanah air, bangsa, dan bahasa Indonesia.'},
+{c:'sejarah',d:0,q:'Organisasi Boedi Oetomo didirikan pada tahun?',o:['1908','1912','1920','1928'],a:0,f:'Boedi Oetomo didirikan 20 Mei 1908 oleh mahasiswa STOVIA Jakarta. Tanggal itu diperingati sebagai Hari Kebangkitan Nasional.'},
+{c:'sejarah',d:0,q:'Pertempuran Surabaya yang heroik terjadi pada tanggal?',o:['10 November 1945','17 Agustus 1945','1 Maret 1949','19 Desember 1948'],a:0,f:'Pertempuran Surabaya 10 November 1945 dipimpin arek Surabaya melawan Inggris. Hari itu diperingati sebagai Hari Pahlawan.'},
+{c:'sejarah',d:1,q:'VOC (Kongsi Dagang Belanda) masuk ke Indonesia pada tahun?',o:['1602','1511','1498','1650'],a:0,f:'VOC didirikan tahun 1602 dan mulai menguasai perdagangan di Nusantara. VOC adalah perusahaan multinasional pertama di dunia.'},
+{c:'sejarah',d:1,q:'Majapahit mencapai puncak kejayaan di bawah raja?',o:['Hayam Wuruk','Raden Wijaya','Jayanegara','Tribhuwana'],a:0,f:'Majapahit mencapai puncak kejayaan di bawah Raja Hayam Wuruk (1350-1389) dengan Mahapatih Gajah Mada.'},
+{c:'sejarah',d:2,q:'Konferensi Asia Afrika pertama diadakan di kota?',o:['Bandung','Jakarta','Bogor','Yogyakarta'],a:0,f:'Konferensi Asia Afrika diadakan di Bandung, April 1955. Dihadiri 29 negara dan menghasilkan Dasasila Bandung.'},
+{c:'sejarah',d:2,q:'Operasi Trikora dilancarkan untuk merebut wilayah?',o:['Papua Barat','Timor Timur','Kalimantan Utara','Sabah'],a:0,f:'Operasi Trikora dicanangkan Soekarno pada 1961 untuk merebut Irian Barat (Papua) dari Belanda.'},
+{c:'sejarah',d:2,q:'Pemberontakan PKI di Madiun terjadi pada tahun?',o:['1948','1965','1926','1950'],a:0,f:'Pemberontakan PKI Madiun terjadi September 1948 di bawah pimpinan Musso. Berhasil ditumpas TNI dalam waktu singkat.'},
+{c:'sejarah',d:1,q:'Perjanjian Renville ditandatangani pada tahun?',o:['1948','1945','1949','1950'],a:0,f:'Perjanjian Renville ditandatangani Januari 1948 di atas kapal USS Renville. Dianggap merugikan Indonesia karena mempersempit wilayah RI.'},
+{c:'geografi',d:0,q:'Gunung tertinggi di Indonesia adalah?',o:['Puncak Jaya','Gunung Semeru','Gunung Rinjani','Gunung Kerinci'],a:0,f:'Puncak Jaya di Papua setinggi 4.884 mdpl adalah puncak tertinggi Indonesia, juga tertinggi di Oceania.'},
+{c:'geografi',d:0,q:'Danau terbesar di Indonesia adalah?',o:['Danau Toba','Danau Singkarak','Danau Maninjau','Danau Poso'],a:0,f:'Danau Toba di Sumatera Utara adalah danau vulkanik terbesar di dunia. Terbentuk dari letusan supervulkan sekitar 74.000 tahun lalu.'},
+{c:'geografi',d:0,q:'Ibu kota baru Indonesia bernama?',o:['Nusantara','Palangkaraya','Samarinda','Balikpapan'],a:0,f:'Ibu Kota Nusantara (IKN) terletak di Kalimantan Timur untuk mengurangi kepadatan Pulau Jawa.'},
+{c:'geografi',d:0,q:'Selat Sunda memisahkan pulau?',o:['Jawa dan Sumatera','Bali dan Lombok','Jawa dan Madura','Kalimantan dan Sulawesi'],a:0,f:'Selat Sunda memisahkan Jawa dan Sumatera. Di sinilah terdapat Gunung Anak Krakatau yang masih aktif.'},
+{c:'geografi',d:1,q:'Sungai terpanjang di Indonesia yang ada di Kalimantan?',o:['Sungai Kapuas','Sungai Mahakam','Sungai Barito','Sungai Kahayan'],a:0,f:'Sungai Kapuas di Kalimantan Barat (1.143 km) adalah sungai terpanjang di Indonesia.'},
+{c:'geografi',d:1,q:'Jumlah provinsi di Indonesia saat ini adalah?',o:['38','34','33','37'],a:0,f:'Indonesia kini memiliki 38 provinsi setelah pembentukan 4 provinsi baru di Papua pada 2022.'},
+{c:'geografi',d:1,q:'Pulau Komodo termasuk dalam provinsi?',o:['Nusa Tenggara Timur','Nusa Tenggara Barat','Bali','Maluku'],a:0,f:'Pulau Komodo masuk Provinsi NTT dan bagian dari Taman Nasional Komodo, UNESCO World Heritage Site.'},
+{c:'geografi',d:2,q:'Kepulauan Natuna termasuk wilayah provinsi?',o:['Kepulauan Riau','Riau','Bangka Belitung','Kalimantan Barat'],a:0,f:'Kepulauan Natuna masuk Provinsi Kepulauan Riau. Menjadi titik sengketa klaim China yang ditolak Indonesia.'},
+{c:'geografi',d:2,q:'Gunung Kerinci yang tertinggi di Sumatera ada di provinsi?',o:['Jambi','Sumatera Barat','Bengkulu','Sumatera Selatan'],a:0,f:'Gunung Kerinci (3.805 mdpl) adalah gunung berapi tertinggi di Sumatera, terletak di Provinsi Jambi.'},
+{c:'geografi',d:2,q:'Laut Banda yang terkenal sebagai pusat rempah dunia ada di provinsi?',o:['Maluku','Papua','NTT','Sulawesi Tenggara'],a:0,f:'Laut Banda di Maluku adalah pusat rempah (pala, cengkeh). Pulau Run pernah ditukar Belanda dengan Manhattan!'},
+{c:'tokoh',d:0,q:'Siapa yang membacakan teks proklamasi kemerdekaan RI?',o:['Soekarno','Mohammad Hatta','Sutan Sjahrir','Ahmad Soebardjo'],a:0,f:'Soekarno membacakan teks proklamasi pada 17 Agustus 1945, didampingi Mohammad Hatta.'},
+{c:'tokoh',d:0,q:'Siapa pencipta lagu kebangsaan Indonesia Raya?',o:['W.R. Supratman','Ismail Marzuki','C. Simanjuntak','Gombloh'],a:0,f:'Wage Rudolf Supratman menciptakan Indonesia Raya dan memainkannya pertama kali pada Kongres Pemuda II, 28 Oktober 1928.'},
+{c:'tokoh',d:0,q:'R.A. Kartini dikenal sebagai pelopor?',o:['Emansipasi wanita','Perlawanan penjajah','Pendidikan nasional','Seni tari Jawa'],a:0,f:'R.A. Kartini lahir 21 April 1879, adalah pelopor kebangkitan perempuan Indonesia. Kumpulan suratnya: "Habis Gelap Terbitlah Terang".'},
+{c:'tokoh',d:0,q:'KH Ahmad Dahlan mendirikan organisasi?',o:['Muhammadiyah','Nahdlatul Ulama','Sarekat Islam','PSII'],a:0,f:'KH Ahmad Dahlan mendirikan Muhammadiyah pada 18 November 1912 di Yogyakarta. Kini memiliki ribuan sekolah dan rumah sakit.'},
+{c:'tokoh',d:1,q:'Jenderal Sudirman dikenal sebagai?',o:['Panglima Besar TNI pertama','Presiden pertama RI','Pahlawan Diponegoro','Pendiri BPUPKI'],a:0,f:'Jenderal Sudirman adalah Panglima Besar TNI pertama. Meski sakit TBC, beliau memimpin perang gerilya selama 7 bulan dengan ditandu.'},
+{c:'tokoh',d:1,q:'KH Hasyim Asyari mendirikan organisasi Islam?',o:['Nahdlatul Ulama','Muhammadiyah','Persis','Al-Irsyad'],a:0,f:'KH Hasyim Asyari mendirikan Nahdlatul Ulama (NU) pada 31 Januari 1926 di Surabaya. NU kini salah satu organisasi Islam terbesar di dunia.'},
+{c:'tokoh',d:1,q:'BJ Habibie adalah Presiden ke berapa Indonesia?',o:['Ke-3','Ke-4','Ke-2','Ke-5'],a:0,f:'BJ Habibie adalah Presiden ke-3 RI sekaligus ilmuwan jenius. Beliau merancang pesawat N250 dan dikenal sebagai Bapak Teknologi Indonesia.'},
+{c:'tokoh',d:2,q:'Sultan Hasanuddin dijuluki "Ayam Jantan dari Timur" karena?',o:['Keberanian melawan VOC Belanda','Memperluas wilayah','Memimpin perdagangan','Membangun armada laut'],a:0,f:'Sultan Hasanuddin dari Kerajaan Gowa dijuluki demikian oleh Belanda karena keberanian melawan VOC. Menyerah setelah Perjanjian Bongaya 1667.'},
+{c:'tokoh',d:2,q:'Siapakah tokoh yang menulis novel Bumi Manusia?',o:['Pramoedya Ananta Toer','Chairil Anwar','Mochtar Lubis','NH Dini'],a:0,f:'Pramoedya Ananta Toer menulis Tetralogi Buru saat dipenjara di Pulau Buru. Diterjemahkan ke 41 bahasa.'},
+{c:'tokoh',d:2,q:'Pahlawan nasional Cut Nyak Dhien berasal dari?',o:['Aceh','Sumatera Barat','Riau','Sumatera Utara'],a:0,f:'Cut Nyak Dhien adalah pahlawan dari Aceh yang berjuang melawan Belanda bersama suaminya Teuku Umar.'},
+{c:'umum',d:0,q:'Lambang negara Indonesia adalah?',o:['Garuda Pancasila','Burung Merak','Harimau Sumatera','Komodo'],a:0,f:'Garuda Pancasila adalah lambang negara Indonesia. Di dadanya terdapat Perisai Pancasila dan di cakarnya pita "Bhinneka Tunggal Ika".'},
+{c:'umum',d:0,q:'Pancasila terdiri dari berapa sila?',o:['5','4','6','7'],a:0,f:'Pancasila adalah dasar negara Indonesia dengan 5 sila. Dirumuskan Soekarno dalam pidato 1 Juni 1945.'},
+{c:'umum',d:0,q:'Hari Pahlawan Indonesia diperingati setiap tanggal?',o:['10 November','17 Agustus','28 Oktober','1 Juni'],a:0,f:'Hari Pahlawan diperingati 10 November untuk mengenang pertempuran heroik arek Surabaya melawan Inggris pada 1945.'},
+{c:'umum',d:0,q:'Semboyan Bhinneka Tunggal Ika artinya?',o:['Berbeda-beda tetapi tetap satu','Bersatu kita teguh','Maju terus pantang mundur','Persatuan Indonesia'],a:0,f:'"Bhinneka Tunggal Ika" diambil dari Kakawin Sutasoma karya Mpu Tantular abad ke-14.'},
+{c:'umum',d:1,q:'ASEAN didirikan di kota mana pada tahun 1967?',o:['Bangkok','Jakarta','Kuala Lumpur','Manila'],a:0,f:'ASEAN didirikan 8 Agustus 1967 di Bangkok. Indonesia salah satu dari 5 negara pendiri.'},
+{c:'umum',d:1,q:'Lagu "Halo-Halo Bandung" diciptakan sebagai respons atas peristiwa?',o:['Bandung Lautan Api','Pertempuran Surabaya','Palagan Ambarawa','Agresi Militer'],a:0,f:'"Halo-Halo Bandung" ciptaan Ismail Marzuki mengenang semangat Bandung Lautan Api, 24 Maret 1946.'},
+{c:'umum',d:1,q:'Indonesia pertama kali ikut Olimpiade pada tahun?',o:['1952','1948','1956','1964'],a:0,f:'Indonesia pertama kali berpartisipasi di Olimpiade Helsinki 1952. Di 1992 Barcelona, Susi Susanti meraih emas bulutangkis pertama Indonesia.'},
+{c:'umum',d:2,q:'Konferensi Asia Afrika 1955 di Bandung menghasilkan?',o:['Dasasila Bandung','Piagam Jakarta','Deklarasi Juanda','Perjanjian Linggarjati'],a:0,f:'KAA 1955 menghasilkan Dasasila Bandung, 10 prinsip perdamaian internasional. Menjadi tonggak Gerakan Non-Blok.'},
+{c:'umum',d:2,q:'Apa nama operasi militer Indonesia untuk Timor Timur pada 1975?',o:['Operasi Seroja','Operasi Trikora','Operasi Mandala','Operasi Jayawijaya'],a:0,f:'Operasi Seroja adalah operasi militer Indonesia mengintegrasikan Timor Timur (1975). Timor Timur merdeka menjadi Timor Leste pada 2002.'},
+{c:'umum',d:2,q:'Lagu daerah "Ampar-Ampar Pisang" berasal dari?',o:['Kalimantan Selatan','Kalimantan Barat','Kalimantan Tengah','Kalimantan Timur'],a:0,f:'"Ampar-Ampar Pisang" adalah lagu daerah Banjar dari Kalimantan Selatan, menceritakan kehidupan anak-anak Banjarmasin.'},
+];
+
+const CATS=[{id:'semua',lbl:'🌐 Semua'},{id:'budaya',lbl:'🎭 Budaya'},{id:'makanan',lbl:'🍜 Makanan'},{id:'sejarah',lbl:'📜 Sejarah'},{id:'geografi',lbl:'🗺️ Geografi'},{id:'tokoh',lbl:'👤 Tokoh'},{id:'umum',lbl:'💡 Umum'}];
+const DLBL=['Mudah','Sedang','Sulit','Expert'],DPTS=[10,20,35,50],DTIM=[12,10,8,6];
+const TITLES=['Pemula','Pelajar','Pintar','Cerdas','Jenius','Master Nusantara'],LVXP=[0,100,250,500,900,1400,99999];
+
+let mode='santai',catSel='semua',xp=0,level=1;
+let gameQ=[],qIdx=0,score=0,streak=0,bestStreak=0,numCorrect=0;
+let timerVal=0,timerMax=12,timerInt=null,answered=false;
+
+// ===== VISUAL FX =====
+// Particles
+function initParticles(){
+  const p=document.getElementById('particles');
+  const colors=['rgba(255,214,0,.25)','rgba(255,80,80,.2)','rgba(255,255,255,.15)','rgba(198,40,40,.2)'];
+  for(let i=0;i<18;i++){
+    const d=document.createElement('div');
+    const sz=4+Math.random()*10;
+    d.className='p';
+    d.style.cssText=`width:${sz}px;height:${sz}px;background:${colors[i%colors.length]};left:${Math.random()*100}%;animation-duration:${6+Math.random()*10}s;animation-delay:${-Math.random()*10}s`;
+    p.appendChild(d);
+  }
+}
+
+// Ripple
+function addRipple(e,el){
+  const r=el.getBoundingClientRect();
+  const x=e.clientX-r.left,y=e.clientY-r.top;
+  const rp=document.createElement('span');
+  rp.className='ripple-el';
+  rp.style.left=x+'px';rp.style.top=y+'px';
+  el.appendChild(rp);
+  setTimeout(()=>rp.remove(),600);
+}
+document.querySelectorAll('.ripple-host').forEach(el=>{
+  el.addEventListener('click',e=>addRipple(e,el));
+});
+
+// Confetti
+function confetti(){
+  const cols=['#FFD700','#FF6B6B','#4FC3F7','#81C784','#CE93D8','#FFCC02','#fff'];
+  for(let i=0;i<45;i++){
+    const c=document.createElement('div');
+    const sz=5+Math.random()*8;
+    c.className='cf';
+    c.style.cssText=`width:${sz}px;height:${sz}px;background:${cols[i%cols.length]};left:${10+Math.random()*80}%;animation-duration:${.9+Math.random()*.8}s;animation-delay:${Math.random()*.3}s;border-radius:${Math.random()>.5?'50%':'2px'}`;
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(),2000);
+  }
+}
+
+// Sound (Web Audio API)
+let AC;
+function getAC(){if(!AC)try{AC=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}return AC;}
+function beep(freq,dur,type='sine',vol=.18){
+  const ac=getAC();if(!ac)return;
+  try{
+    const o=ac.createOscillator(),g=ac.createGain();
+    o.connect(g);g.connect(ac.destination);
+    o.frequency.value=freq;o.type=type;
+    g.gain.setValueAtTime(vol,ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+dur);
+    o.start();o.stop(ac.currentTime+dur);
+  }catch(e){}
+}
+function sndCorrect(){beep(523,.08);setTimeout(()=>beep(659,.08),90);setTimeout(()=>beep(784,.18),180);}
+function sndWrong(){beep(180,.25,'sawtooth',.12);}
+function sndStreak(){[523,587,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,.09),i*70));}
+function sndClick(){beep(440,.06,'sine',.08);}
+
+// Count-up
+function countUp(el,target,dur=900){
+  const start=parseInt(el.textContent)||0;
+  const diff=target-start;
+  const step=16;
+  let elapsed=0;
+  const t=setInterval(()=>{
+    elapsed+=step;
+    const prog=Math.min(elapsed/dur,1);
+    el.textContent=Math.round(start+diff*prog);
+    if(prog>=1){el.textContent=target;clearInterval(t);}
+  },step);
+}
+
+// Screen show
+function show(id){
+  document.querySelectorAll('.scr').forEach(s=>{
+    if(s.classList.contains('on')){s.classList.add('out');setTimeout(()=>s.classList.remove('out'),300);}
+    s.classList.remove('on');
+  });
+  setTimeout(()=>document.getElementById(id).classList.add('on'),30);
+}
+
+// ===== GAME LOGIC (unchanged) =====
+function setMode(m){
+  mode=m;sndClick();
+  document.querySelectorAll('.btn-mode').forEach(b=>b.classList.remove('active-mode'));
+  document.getElementById('btn-'+m).classList.add('active-mode');
+}
+
+function renderChips(){
+  const el=document.getElementById('cat-chips');el.innerHTML='';
+  CATS.forEach(c=>{
+    const sp=document.createElement('span');
+    sp.className='chip'+(catSel===c.id?' sel':'');
+    sp.textContent=c.lbl;sp.dataset.cat=c.id;
+    el.appendChild(sp);
+  });
+}
+
+function updateLvUI(){
+  const cur=LVXP[level-1]||0,nxt=LVXP[level]||99999;
+  const pct=Math.min(100,Math.round((xp-cur)/(nxt-cur)*100));
+  document.getElementById('lvl-badge').textContent='Lv.'+level+' '+TITLES[Math.min(level-1,TITLES.length-1)];
+  document.getElementById('xp-num').textContent=xp;
+  document.getElementById('xp-next').textContent=nxt===99999?'MAX':nxt;
+  document.getElementById('xp-fill').style.width=pct+'%';
+}
+
+function beginGame(){
+  sndClick();
+  let pool=catSel==='semua'?[...Q]:Q.filter(q=>q.c===catSel);
+  pool=pool.sort(()=>Math.random()-.5).slice(0,Math.min(15,pool.length));
+  if(pool.length<3){return;}
+  gameQ=pool;qIdx=0;score=0;streak=0;bestStreak=0;numCorrect=0;answered=false;
+  show('s-game');renderQ();
+}
+
+function renderQ(){
+  if(qIdx>=gameQ.length){endGame();return;}
+  answered=false;
+  const q=gameQ[qIdx];
+  document.getElementById('q-num').textContent='Soal '+(qIdx+1)+'/'+gameQ.length;
+  document.getElementById('prog-fill').style.width=(qIdx/gameQ.length*100)+'%';
+  document.getElementById('q-text').textContent=q.q;
+  document.getElementById('cat-pill').textContent=CATS.find(c=>c.id===q.c)?.lbl||q.c;
+  const dp=document.getElementById('diff-pill');
+  dp.textContent=DLBL[q.d];dp.className='diff-pill diff-'+q.d;
+  document.getElementById('score-top').textContent=score+' pts';
+  updateStreakUI();
+  const keys=['A','B','C','D'],opts=document.getElementById('opts');
+  opts.innerHTML='';
+  q.o.forEach((o,i)=>{
+    const btn=document.createElement('button');
+    btn.className='opt ripple-host';
+    btn.innerHTML='<span class="opt-key">'+keys[i]+'</span>'+o;
+    btn.dataset.idx=i;
+    btn.addEventListener('click',e=>{addRipple(e,btn);});
+    opts.appendChild(btn);
+  });
+  const tw=document.getElementById('timer-wrap');
+  if(mode==='tantang'){
+    tw.style.display='block';timerMax=DTIM[q.d];timerVal=timerMax;
+    updateTimerBar();clearInterval(timerInt);
+    timerInt=setInterval(()=>{timerVal-=.1;if(timerVal<=0){clearInterval(timerInt);if(!answered)timeOut();}else updateTimerBar();},100);
+  }else{tw.style.display='none';clearInterval(timerInt);}
+}
+
+function updateTimerBar(){
+  const pct=(timerVal/timerMax)*100;
+  const bar=document.getElementById('timer-bar');
+  bar.style.width=pct+'%';
+  bar.style.background=pct>60?'#4CAF50':pct>30?'#FFC107':'#F44336';
+}
+
+function updateStreakUI(){
+  const el=document.getElementById('streak-badge');
+  el.textContent='🔥 '+streak;
+  el.className='streak-badge'+(streak>=5?' hot':'');
+}
+
+function doAnswer(i){
+  if(answered)return;answered=true;clearInterval(timerInt);
+  const q=gameQ[qIdx];const ok=i===q.a;
+  document.querySelectorAll('.opt').forEach((b,j)=>{
+    b.disabled=true;
+    if(j===q.a)b.classList.add('correct');
+    else if(j===i&&!ok)b.classList.add('wrong');
+    else b.classList.add('dim');
+  });
+  if(ok){
+    let pts=DPTS[q.d];
+    if(mode==='tantang')pts+=Math.round((timerVal/timerMax)*10);
+    if(streak>=10)pts=Math.round(pts*3);else if(streak>=5)pts=Math.round(pts*2);
+    streak++;if(streak>bestStreak)bestStreak=streak;
+    score+=pts;numCorrect++;
+    sndCorrect();if(streak>=5)setTimeout(sndStreak,300);
+    updateStreakUI();
+    setTimeout(()=>{confetti();showAns(true,pts,q);},650);
+  }else{
+    streak=0;sndWrong();updateStreakUI();
+    setTimeout(()=>showAns(false,0,q),650);
+  }
+}
+
+function timeOut(){
+  answered=true;const q=gameQ[qIdx];streak=0;sndWrong();updateStreakUI();
+  document.querySelectorAll('.opt').forEach((b,j)=>{b.disabled=true;if(j===q.a)b.classList.add('correct');else b.classList.add('dim');});
+  setTimeout(()=>showAns(false,0,q),800);
+}
+
+function showAns(ok,pts,q){
+  document.getElementById('ans-icon').textContent=ok?'✅':'❌';
+  document.getElementById('ans-label').textContent=ok?'BENAR! 🎉':'SALAH!';
+  document.getElementById('ans-label').style.color=ok?'#66BB6A':'#EF5350';
+  document.getElementById('ans-pts').textContent=ok?'+'+pts+' poin · Combo '+streak+'🔥':'Jawaban: '+q.o[q.a];
+  document.getElementById('fact-text').textContent=q.f;
+  document.getElementById('btn-next').textContent=qIdx+1>=gameQ.length?'Lihat Hasil 🏆':'Selanjutnya →';
+  show('s-ans');
+}
+
+function nextQ(){sndClick();qIdx++;show('s-game');renderQ();}
+
+function endGame(){
+  clearInterval(timerInt);
+  const tot=gameQ.length,acc=Math.round(numCorrect/tot*100),prevLv=level;
+  xp+=score;
+  while(level<TITLES.length&&xp>=LVXP[level])level++;
+  document.getElementById('over-score').textContent='0';
+  document.getElementById('over-sub').textContent='poin • '+(CATS.find(c=>c.id===catSel)?.lbl||catSel)+' • '+(mode==='tantang'?'⏱️ Tantang':'😌 Santai');
+  document.getElementById('st-correct').textContent=numCorrect;
+  document.getElementById('st-wrong').textContent=tot-numCorrect;
+  document.getElementById('st-streak').textContent=bestStreak+'x';
+  document.getElementById('st-acc').textContent=acc+'%';
+  document.getElementById('st-xp').textContent='+'+score+' XP';
+  const nb=document.getElementById('newlv-box');
+  if(level>prevLv){nb.style.display='block';document.getElementById('newlv-txt').textContent='NAIK LEVEL! Lv.'+level+' — '+TITLES[Math.min(level-1,TITLES.length-1)];}
+  else nb.style.display='none';
+  updateLvUI();show('s-over');
+  setTimeout(()=>{countUp(document.getElementById('over-score'),score);if(level>prevLv)confetti();},400);
+}
+
+// ===== EVENT LISTENERS =====
+document.getElementById('btn-santai').addEventListener('click',()=>setMode('santai'));
+document.getElementById('btn-tantang').addEventListener('click',()=>setMode('tantang'));
+document.getElementById('btn-main').addEventListener('click',beginGame);
+document.getElementById('btn-next').addEventListener('click',nextQ);
+document.getElementById('btn-again').addEventListener('click',beginGame);
+document.getElementById('btn-home-o').addEventListener('click',()=>{sndClick();show('s-home');});
+document.getElementById('btn-exit').addEventListener('click',()=>{document.getElementById('exit-confirm').style.display='flex';});
+document.getElementById('exit-no').addEventListener('click',()=>{document.getElementById('exit-confirm').style.display='none';});
+document.getElementById('exit-yes').addEventListener('click',()=>{document.getElementById('exit-confirm').style.display='none';clearInterval(timerInt);show('s-home');});
+document.getElementById('cat-chips').addEventListener('click',e=>{const c=e.target.closest('.chip');if(c){sndClick();catSel=c.dataset.cat;renderChips();}});
+document.getElementById('opts').addEventListener('click',e=>{const o=e.target.closest('.opt');if(o&&!o.disabled)doAnswer(parseInt(o.dataset.idx));});
+
+// Init
+initParticles();renderChips();updateLvUI();setMode('santai');show('s-home');
+</script>
+</body></html>
