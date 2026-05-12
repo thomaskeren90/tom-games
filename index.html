@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Tom Games</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+  min-height: 100vh;
+  color: #fff;
+  overflow-x: hidden;
+}
+.portal {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 30px 20px;
+  text-align: center;
+}
+.logo {
+  font-size: 3em;
+  font-weight: 900;
+  background: linear-gradient(135deg, #f5af19, #f12711);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 5px;
+  letter-spacing: -2px;
+}
+.tagline {
+  color: #8888aa;
+  font-size: 0.95em;
+  margin-bottom: 35px;
+}
+.games { display: flex; flex-direction: column; gap: 16px; }
+.game-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 18px;
+  text-decoration: none;
+  color: #fff;
+  transition: all 0.25s ease;
+  backdrop-filter: blur(10px);
+}
+.game-card:hover {
+  background: rgba(255,255,255,0.12);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+}
+.game-card:active { transform: scale(0.98); }
+.game-icon {
+  font-size: 2.5em;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  flex-shrink: 0;
+}
+.game-info { text-align: left; flex: 1; }
+.game-name {
+  font-size: 1.15em;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.game-desc {
+  font-size: 0.8em;
+  color: #9999bb;
+  line-height: 1.3;
+}
+.game-tag {
+  font-size: 0.65em;
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.1);
+  color: #aaa;
+  margin-top: 5px;
+  display: inline-block;
+}
+.i1 { background: linear-gradient(135deg, #f5af19, #f12711); }
+.i2 { background: linear-gradient(135deg, #00b09b, #96c93d); }
+.i3 { background: linear-gradient(135deg, #e040fb, #7c4dff); }
+.i4 { background: linear-gradient(135deg, #00bcd4, #2196f3); }
+.i5 { background: linear-gradient(135deg, #ff6f00, #ff9100); }
+.footer {
+  margin-top: 40px;
+  color: #555;
+  font-size: 0.75em;
+}
+</style>
+</head>
+<body>
+<div class="portal">
+  <div class="logo">TOM GAMES</div>
+  <div class="tagline">Simple games. Zero BS. Play anywhere.</div>
+
+  <div class="games">
+    <a class="game-card" href="tahu-bulat.html">
+      <div class="game-icon i1">🟡</div>
+      <div class="game-info">
+        <div class="game-name">Tahu Bulat Tycoon</div>
+        <div class="game-desc">Sell fried tofu, build a street food empire. Idle clicker with Indonesian flavor.</div>
+        <span class="game-tag">IDLE • CLICKER</span>
+      </div>
+    </a>
+
+    <a class="game-card" href="flappy-tap.html">
+      <div class="game-icon i2">🐦</div>
+      <div class="game-info">
+        <div class="game-name">Flappy Tap</div>
+        <div class="game-desc">Fly through Indonesian landmarks. Simple to learn, impossible to master.</div>
+        <span class="game-tag">ARCADE • ENDLESS</span>
+      </div>
+    </a>
+
+    <a class="game-card" href="gem-match.html">
+      <div class="game-icon i3">💎</div>
+      <div class="game-info">
+        <div class="game-name">Gem Match</div>
+        <div class="game-desc">Match-3 puzzle with batik gems. No lives, no paywalls, pure puzzle.</div>
+        <span class="game-tag">PUZZLE • MATCH-3</span>
+      </div>
+    </a>
+
+    <a class="game-card" href="nomer-2048.html">
+      <div class="game-icon i4">🔢</div>
+      <div class="game-info">
+        <div class="game-name">Nomer 2048</div>
+        <div class="game-desc">Slide and merge Rupiah tiles. The classic puzzle with an Indonesian twist.</div>
+        <span class="game-tag">PUZZLE • BRAIN</span>
+      </div>
+    </a>
+
+    <a class="game-card" href="ular-tangga.html">
+      <div class="game-icon i5">🎲</div>
+      <div class="game-info">
+        <div class="game-name">Ular Tangga</div>
+        <div class="game-desc">Snakes & Ladders with power-ups. Strategy meets childhood nostalgia.</div>
+        <span class="game-tag">BOARD • MULTIPLAYER</span>
+      </div>
+    </a>
+  </div>
+
+  <div class="footer">Made with ❤️ in Indonesia • Works offline • No ads forced</div>
+</div>
+</body>
+</html>

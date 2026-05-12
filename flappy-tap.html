@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Flappy Tap</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0a1628;overflow:hidden;height:100vh;user-select:none;touch-action:manipulation}
+canvas{display:block;margin:0 auto}
+.ui{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;pointer-events:none;z-index:10}
+.score{font-size:2em;font-weight:900;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,0.5)}
+.best{font-size:0.8em;color:#88ccff}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:20;backdrop-filter:blur(5px)}
+.overlay-card{background:rgba(10,22,40,0.95);border:2px solid rgba(136,204,255,0.3);border-radius:20px;padding:30px;text-align:center;max-width:300px;width:90%}
+.overlay-card h1{font-size:1.8em;margin-bottom:5px}
+.overlay-card .emoji{font-size:3em;margin-bottom:10px}
+.overlay-card p{color:#888;font-size:0.85em;margin:6px 0}
+.final-score{font-size:3em;font-weight:900;color:#88ccff;margin:10px 0}
+.btn{background:linear-gradient(135deg,#00b09b,#96c93d);border:none;color:#fff;padding:12px 30px;border-radius:25px;font-size:1em;font-weight:700;cursor:pointer;margin-top:10px}
+.btn:hover{transform:scale(1.05)}
+.theme-name{position:fixed;bottom:16px;left:0;right:0;text-align:center;color:rgba(255,255,255,0.3);font-size:0.75em;pointer-events:none;z-index:10}
+</style>
+</head>
+<body>
+<div class="ui">
+  <div class="score" id="score">0</div>
+  <div class="best">Best: <span id="best">0</span></div>
+</div>
+<canvas id="c"></canvas>
+<div class="theme-name" id="themeName">🏙️ Kota</div>
+
+<div class="overlay" id="menuOverlay">
+  <div class="overlay-card">
+    <div class="emoji">🐦</div>
+    <h1>Flappy Tap</h1>
+    <p>Tap to fly through Indonesian landmarks</p>
+    <p style="color:#666;font-size:0.75em">Tap anywhere or press Space</p>
+    <button class="btn" onclick="startGame()">Mulai Main</button>
+  </div>
+</div>
+
+<div class="overlay" id="gameOverOverlay" style="display:none">
+  <div class="overlay-card">
+    <div class="emoji">💀</div>
+    <h1>Game Over</h1>
+    <div class="final-score" id="finalScore">0</div>
+    <p id="newBest" style="color:#ffd700;display:none">🏆 New Best!</p>
+    <p id="section reached" style="color:#88ccff"></p>
+    <button class="btn" onclick="startGame()">Coba Lagi</button>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+// Game constants
+const GRAVITY = 0.35;
+const JUMP = -6.5;
+const PIPE_SPEED = 2.5;
+const PIPE_GAP = 150;
+const PIPE_WIDTH = 60;
+const PIPE_SPACING = 220;
+const BIRD_SIZE = 18;
+
+// Themes (Indonesian landmarks)
+const THEMES = [
+  {name:'🏙️ Kota', sky1:'#0a1628',sky2:'#1a3a5c',ground:'#2a2a2a',pipeColor:'#555',accent:'#88ccff'},
+  {name:'🌴 Bali', sky1:'#0a2818',sky2:'#1a5c3a',ground:'#3a2a1a',pipeColor:'#4a7a3a',accent:'#96c93d'},
+  {name:'🏛️ Borobudur', sky1:'#1a0a00',sky2:'#5c3a1a',ground:'#3a2a0a',pipeColor:'#8a6a3a',accent:'#ffd700'},
+  {name:'🌊 Samudra', sky1:'#001030',sky2:'#003060',ground:'#0a2040',pipeColor:'#005090',accent:'#00bcd4'},
+  {name:'🚀 Luar Angkasa', sky1:'#0a001a',sky2:'#1a003a',ground:'#0a0020',pipeColor:'#3a006a',accent:'#e040fb'},
+];
+
+let state, bird, pipes, score, best, gameRunning, themeIndex, frameCount, ghostRun, bestPath;
+
+function resize() {
+  canvas.width = Math.min(window.innerWidth, 420);
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+best = parseInt(localStorage.getItem('flappy-best')) || 0;
+document.getElementById('best').textContent = best;
+
+function init() {
+  bird = {x: canvas.width*0.25, y: canvas.height*0.4, vy:0, rotation:0};
+  pipes = [];
+  score = 0;
+  themeIndex = 0;
+  frameCount = 0;
+  ghostRun = [];
+  bestPath = JSON.parse(localStorage.getItem('flappy-ghost') || '[]');
+  document.getElementById('score').textContent = '0';
+  updateTheme();
+}
+
+function updateTheme() {
+  const t = THEMES[themeIndex % THEMES.length];
+  document.getElementById('themeName').textContent = t.name;
+}
+
+function startGame() {
+  document.getElementById('menuOverlay').style.display = 'none';
+  document.getElementById('gameOverOverlay').style.display = 'none';
+  init();
+  gameRunning = true;
+  requestAnimationFrame(loop);
+}
+
+function flap() {
+  if (!gameRunning) return;
+  bird.vy = JUMP;
+}
+
+function spawnPipe() {
+  const minTop = 80;
+  const maxTop = canvas.height - PIPE_GAP - 80;
+  const topH = minTop + Math.random() * (maxTop - minTop);
+  pipes.push({x: canvas.width + PIPE_WIDTH, topH, scored: false});
+}
+
+function loop() {
+  if (!gameRunning) return;
+  frameCount++;
+
+  // Physics
+  bird.vy += GRAVITY;
+  bird.y += bird.vy;
+  bird.rotation = Math.min(bird.vy * 3, 70);
+
+  // Record ghost
+  if (frameCount % 2 === 0) {
+    ghostRun.push({y: bird.y, s: score});
+  }
+
+  // Spawn pipes
+  if (pipes.length === 0 || pipes[pipes.length-1].x < canvas.width - PIPE_SPACING) {
+    spawnPipe();
+  }
+
+  // Move pipes
+  pipes.forEach(p => p.x -= PIPE_SPEED);
+  pipes = pipes.filter(p => p.x > -PIPE_WIDTH);
+
+  // Score
+  pipes.forEach(p => {
+    if (!p.scored && p.x + PIPE_WIDTH < bird.x) {
+      p.scored = true;
+      score++;
+      document.getElementById('score').textContent = score;
+
+      // Theme change every 10
+      if (score % 10 === 0) {
+        themeIndex++;
+        updateTheme();
+      }
+    }
+  });
+
+  // Collision
+  const bx = bird.x, by = bird.y, bs = BIRD_SIZE;
+  if (by > canvas.height - 40 || by < 0) { gameOver(); return; }
+  for (const p of pipes) {
+    if (bx + bs > p.x && bx - bs < p.x + PIPE_WIDTH) {
+      if (by - bs < p.topH || by + bs > p.topH + PIPE_GAP) {
+        gameOver();
+        return;
+      }
+    }
+  }
+
+  draw();
+  requestAnimationFrame(loop);
+}
+
+function draw() {
+  const t = THEMES[themeIndex % THEMES.length];
+
+  // Sky gradient
+  const grad = ctx.createLinearGradient(0,0,0,canvas.height);
+  grad.addColorStop(0, t.sky1);
+  grad.addColorStop(1, t.sky2);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // Ground
+  ctx.fillStyle = t.ground;
+  ctx.fillRect(0, canvas.height-40, canvas.width, 40);
+  ctx.fillStyle = 'rgba(255,255,255,0.05)';
+  for (let i=0; i<canvas.width; i+=20) {
+    ctx.fillRect(i, canvas.height-40, 1, 40);
+  }
+
+  // Ghost (best run)
+  if (bestPath.length > 0) {
+    const ghostIdx = Math.floor(frameCount/2);
+    if (ghostIdx < bestPath.length) {
+      const g = bestPath[ghostIdx];
+      ctx.globalAlpha = 0.15;
+      ctx.fillStyle = t.accent;
+      ctx.beginPath();
+      ctx.arc(bird.x, g.y, BIRD_SIZE, 0, Math.PI*2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // Pipes
+  pipes.forEach(p => {
+    // Top pipe
+    ctx.fillStyle = t.pipeColor;
+    ctx.fillRect(p.x, 0, PIPE_WIDTH, p.topH);
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.fillRect(p.x, p.topH-20, PIPE_WIDTH, 20);
+
+    // Bottom pipe
+    const bottomY = p.topH + PIPE_GAP;
+    ctx.fillStyle = t.pipeColor;
+    ctx.fillRect(p.x, bottomY, PIPE_WIDTH, canvas.height - bottomY - 40);
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.fillRect(p.x, bottomY, PIPE_WIDTH, 20);
+
+    // Near-miss indicator
+    const bx = bird.x;
+    if (bx > p.x && bx < p.x + PIPE_WIDTH) {
+      const distTop = bird.y - p.topH;
+      const distBot = (p.topH + PIPE_GAP) - bird.y;
+      if (distTop < 25 || distBot < 25) {
+        ctx.fillStyle = 'rgba(255,215,0,0.3)';
+        ctx.fillRect(p.x, 0, PIPE_WIDTH, p.topH);
+        ctx.fillRect(p.x, p.topH + PIPE_GAP, PIPE_WIDTH, canvas.height);
+      }
+    }
+  });
+
+  // Bird
+  ctx.save();
+  ctx.translate(bird.x, bird.y);
+  ctx.rotate(bird.rotation * Math.PI / 180);
+
+  // Body
+  ctx.fillStyle = '#ffd700';
+  ctx.beginPath();
+  ctx.arc(0, 0, BIRD_SIZE, 0, Math.PI*2);
+  ctx.fill();
+
+  // Eye
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(6, -5, 6, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.arc(8, -5, 3, 0, Math.PI*2);
+  ctx.fill();
+
+  // Beak
+  ctx.fillStyle = '#ff6f00';
+  ctx.beginPath();
+  ctx.moveTo(BIRD_SIZE, -4);
+  ctx.lineTo(BIRD_SIZE+10, 0);
+  ctx.lineTo(BIRD_SIZE, 4);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+
+  // Score display (large, centered during play)
+  if (frameCount < 60) {
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.font = 'bold 60px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(score, canvas.width/2, canvas.height/2 - 50);
+  }
+}
+
+function gameOver() {
+  gameRunning = false;
+  const isNewBest = score > best;
+  if (isNewBest) {
+    best = score;
+    localStorage.setItem('flappy-best', best);
+    document.getElementById('best').textContent = best;
+    localStorage.setItem('flappy-ghost', JSON.stringify(ghostRun));
+  }
+  document.getElementById('finalScore').textContent = score;
+  document.getElementById('newBest').style.display = isNewBest ? 'block' : 'none';
+
+  const section = Math.floor(score / 10);
+  const theme = THEMES[section % THEMES.length];
+  document.getElementById('section reached').textContent = `Mencapai ${theme.name}`;
+
+  setTimeout(() => {
+    document.getElementById('gameOverOverlay').style.display = 'flex';
+  }, 300);
+}
+
+// Controls
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' || e.code === 'ArrowUp') {
+    e.preventDefault();
+    if (document.getElementById('menuOverlay').style.display !== 'none') {
+      startGame();
+    } else {
+      flap();
+    }
+  }
+});
+canvas.addEventListener('touchstart', e => { e.preventDefault(); flap(); });
+canvas.addEventListener('mousedown', e => { e.preventDefault(); flap(); });
+
+init();
+</script>
+</body>
+</html>

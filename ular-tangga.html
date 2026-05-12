@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Ular Tangga</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(135deg,#1a0a00,#2a1a00);color:#fff;min-height:100vh;user-select:none}
+.top-bar{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:rgba(0,0,0,0.3)}
+.turn-info{font-size:0.9em;color:#ffa726}
+.mode-badge{background:rgba(255,107,0,0.2);border:1px solid rgba(255,107,0,0.3);padding:4px 12px;border-radius:20px;font-size:0.75em;color:#ff6f00}
+.board-wrap{display:flex;flex-direction:column;align-items:center;padding:10px}
+.board{display:grid;grid-template-columns:repeat(10,1fr);gap:2px;width:min(95vw,400px);aspect-ratio:1;background:rgba(0,0,0,0.3);padding:4px;border-radius:10px;position:relative}
+.cell{border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:clamp(0.5em,2.5vw,0.75em);font-weight:700;position:relative;aspect-ratio:1}
+.cell.light{background:rgba(255,165,0,0.12)}
+.cell.dark{background:rgba(255,165,0,0.05)}
+.cell.snake{background:rgba(255,0,0,0.15)}
+.cell.ladder{background:rgba(0,200,0,0.15)}
+.cell.current{box-shadow:inset 0 0 0 2px #ffd700}
+.player-dot{width:10px;height:10px;border-radius:50%;position:absolute;border:2px solid rgba(0,0,0,0.5)}
+.controls{display:flex;flex-direction:column;align-items:center;gap:10px;padding:12px;width:100%}
+.dice-area{display:flex;align-items:center;gap:15px}
+.dice{width:60px;height:60px;background:#fff;color:#000;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:2em;font-weight:900;cursor:pointer;transition:transform 0.1s;border:3px solid #ddd}
+.dice:active{transform:scale(0.9)}
+.dice.rolling{animation:dice-roll 0.5s ease}
+@keyframes dice-roll{0%{transform:rotate(0)}25%{transform:rotate(90deg)}50%{transform:rotate(180deg)}75%{transform:rotate(270deg)}100%{transform:rotate(360deg)}}
+.roll-btn{background:linear-gradient(135deg,#ff6f00,#ff9100);border:none;color:#fff;padding:12px 30px;border-radius:25px;font-size:1em;font-weight:700;cursor:pointer}
+.roll-btn:disabled{opacity:0.4;cursor:default}
+.powerups{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.powerup{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);padding:6px 12px;border-radius:16px;font-size:0.75em;cursor:pointer;display:flex;align-items:center;gap:4px}
+.powerup:disabled{opacity:0.3;cursor:default}
+.powerup.active{background:rgba(255,165,0,0.3);border-color:#ff6f00}
+.players{display:flex;gap:8px;margin-top:6px}
+.player-card{padding:6px 12px;border-radius:10px;font-size:0.8em;background:rgba(255,255,255,0.05);border:2px solid transparent}
+.player-card.active{border-color:#ffd700;background:rgba(255,215,0,0.1)}
+.player-card.winner{border-color:#4caf50;background:rgba(76,175,80,0.2)}
+.msg{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.9);border:2px solid #ffd700;border-radius:16px;padding:20px 30px;text-align:center;z-index:50;animation:msg-in 0.3s ease}
+@keyframes msg-in{from{opacity:0;transform:translate(-50%,-50%) scale(0.8)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(5px)}
+.overlay-card{background:rgba(30,15,0,0.95);border:2px solid rgba(255,107,0,0.3);border-radius:20px;padding:30px;text-align:center;max-width:300px;width:90%}
+.overlay-card h1{margin-bottom:10px}
+.btn{background:linear-gradient(135deg,#ff6f00,#ff9100);border:none;color:#fff;padding:12px 30px;border-radius:25px;font-size:1em;font-weight:700;cursor:pointer;margin-top:10px}
+.settings{padding:16px}
+.setting{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
+.setting label{font-size:0.9em}
+select{background:#1a0a00;color:#fff;border:1px solid rgba(255,255,255,0.2);padding:6px 10px;border-radius:8px;font-size:0.85em}
+.snake-icon{color:#ff5252}
+.ladder-icon{color:#4caf50}
+.legend{display:flex;gap:15px;justify-content:center;padding:6px;font-size:0.7em;color:#888}
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <div class="turn-info" id="turnInfo">Player 1's Turn</div>
+  <div class="mode-badge" id="modeBadge">Classic</div>
+</div>
+
+<div class="board-wrap">
+  <div class="board" id="board"></div>
+  <div class="legend">
+    <span>🔴 = Ular (turun)</span>
+    <span>🟢 = Tangga (naik)</span>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="players" id="players"></div>
+  <div class="powerups" id="powerups"></div>
+  <div class="dice-area">
+    <div class="dice" id="dice" onclick="rollDice()">🎲</div>
+    <button class="roll-btn" id="rollBtn" onclick="rollDice()">Roll!</button>
+  </div>
+</div>
+
+<div class="overlay" id="setupOverlay">
+  <div class="overlay-card">
+    <h1>🎲 Ular Tangga</h1>
+    <p style="color:#888;font-size:0.85em;margin-bottom:15px">Snakes & Ladders with a twist!</p>
+    <div class="settings">
+      <div class="setting">
+        <label>Players</label>
+        <select id="playerCount">
+          <option value="2">2 Players</option>
+          <option value="3">3 Players</option>
+          <option value="4">4 Players</option>
+        </select>
+      </div>
+      <div class="setting">
+        <label>Mode</label>
+        <select id="gameMode">
+          <option value="classic">Classic</option>
+          <option value="chaos">Chaos (moving S&L)</option>
+          <option value="powerup">Power-Up</option>
+        </select>
+      </div>
+      <div class="setting">
+        <label>AI Opponents</label>
+        <select id="aiCount">
+          <option value="0">None (Local)</option>
+          <option value="1">1 AI</option>
+          <option value="2">2 AI</option>
+          <option value="3">3 AI</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn" onclick="startGame()">Mulai!</button>
+  </div>
+</div>
+
+<div class="overlay" id="winOverlay" style="display:none">
+  <div class="overlay-card">
+    <h1 id="winTitle">🎉 Pemenang!</h1>
+    <p id="winText"></p>
+    <button class="btn" onclick="location.reload()">Main Lagi</button>
+  </div>
+</div>
+
+<script>
+const BOARD_SIZE = 100;
+const PLAYER_COLORS = ['#ff5252','#448aff','#ffd740','#69f0ae'];
+const PLAYER_EMOJIS = ['🔴','🔵','🟡','🟢'];
+
+// Snakes (head -> tail)
+const SNAKES = {16:6, 47:26, 49:11, 56:53, 62:19, 64:60, 87:24, 93:73, 95:75, 98:78};
+// Ladders (bottom -> top)
+const LADDERS = {1:38, 4:14, 9:31, 21:42, 28:84, 36:44, 51:67, 71:91, 80:100};
+
+let players, currentPlayer, gameActive, mode, chaosTimer, aiPlayers, powerupInventory;
+
+function getSnakesAndLadders() {
+  return {snakes: {...SNAKES}, ladders: {...LADDERS}};
+}
+
+function startGame() {
+  const numPlayers = parseInt(document.getElementById('playerCount').value);
+  const aiCount = parseInt(document.getElementById('aiCount').value);
+  mode = document.getElementById('gameMode').value;
+
+  document.getElementById('setupOverlay').style.display = 'none';
+  document.getElementById('modeBadge').textContent = mode === 'chaos' ? '🌪️ Chaos' : mode === 'powerup' ? '⚡ Power-Up' : '🎯 Classic';
+
+  players = [];
+  aiPlayers = new Set();
+  for (let i = 0; i < numPlayers; i++) {
+    players.push({pos: 0, color: PLAYER_COLORS[i], emoji: PLAYER_EMOJIS[i]});
+    if (i >= numPlayers - aiCount) aiPlayers.add(i);
+  }
+
+  currentPlayer = 0;
+  gameActive = true;
+  powerupInventory = players.map(() => ({shield: 1, extraRoll: 1, sabotage: 1}));
+
+  renderBoard();
+  renderPlayers();
+  renderPowerups();
+  updateTurn();
+
+  if (mode === 'chaos') {
+    chaosTimer = setInterval(shuffleSnakesAndLadders, 5000);
+  }
+}
+
+function renderBoard() {
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  const {snakes, ladders} = getSnakesAndLadders();
+
+  for (let row = 9; row >= 0; row--) {
+    const cells = [];
+    for (let col = 0; col < 10; col++) {
+      const num = row % 2 === 0
+        ? row * 10 + col + 1
+        : row * 10 + (9 - col) + 1;
+      cells.push(num);
+    }
+    if (row % 2 === 1) cells.reverse();
+
+    cells.forEach(num => {
+      const cell = document.createElement('div');
+      const isSnake = snakes[num] !== undefined;
+      const isLadder = ladders[num] !== undefined;
+      const isLight = (Math.floor((num-1)/10) + ((num-1)%10)) % 2 === 0;
+      cell.className = 'cell ' + (isSnake ? 'snake' : isLadder ? 'ladder' : isLight ? 'light' : 'dark');
+      cell.dataset.num = num;
+
+      let label = `<span style="opacity:0.4;font-size:0.6em">${num}</span>`;
+      if (isSnake) label = `<span class="snake-icon">🐍</span>`;
+      if (isLadder) label = `<span class="ladder-icon">🪜</span>`;
+      cell.innerHTML = label;
+
+      board.appendChild(cell);
+    });
+  }
+}
+
+function renderPlayers() {
+  const board = document.getElementById('board');
+  // Clear old dots
+  board.querySelectorAll('.player-dot').forEach(d => d.remove());
+
+  const {snakes, ladders} = getSnakesAndLadders();
+
+  players.forEach((p, i) => {
+    if (p.pos === 0) return;
+    const cell = board.querySelector(`[data-num="${p.pos}"]`);
+    if (!cell) return;
+    const dot = document.createElement('div');
+    dot.className = 'player-dot';
+    dot.style.background = p.color;
+    dot.style.left = (5 + i * 12) + 'px';
+    dot.style.bottom = '2px';
+    cell.appendChild(dot);
+  });
+
+  // Update player cards
+  const container = document.getElementById('players');
+  container.innerHTML = players.map((p, i) => {
+    let cls = 'player-card';
+    if (i === currentPlayer && gameActive) cls += ' active';
+    if (p.pos >= BOARD_SIZE) cls += ' winner';
+    const isAI = aiPlayers.has(i) ? ' 🤖' : '';
+    return `<div class="${cls}" style="border-color:${p.color}">${p.emoji} P${i+1}${isAI} : ${p.pos}</div>`;
+  }).join('');
+}
+
+function renderPowerups() {
+  if (mode !== 'powerup') {
+    document.getElementById('powerups').innerHTML = '';
+    return;
+  }
+  const inv = powerupInventory[currentPlayer] || {shield:0,extraRoll:0,sabotage:0};
+  document.getElementById('powerups').innerHTML = `
+    <button class="powerup" onclick="usePowerup('shield')" ${inv.shield<=0?'disabled':''}>🛡️ Shield (${inv.shield})</button>
+    <button class="powerup" onclick="usePowerup('extraRoll')" ${inv.extraRoll<=0?'disabled':''}>🎲 Extra Roll (${inv.extraRoll})</button>
+    <button class="powerup" onclick="usePowerup('sabotage')" ${inv.sabotage<=0?'disabled':''}>💣 Sabotage (${inv.sabotage})</button>
+  `;
+}
+
+let shieldActive = false;
+let extraRollActive = false;
+
+function usePowerup(type) {
+  const inv = powerupInventory[currentPlayer];
+  if (inv[type] <= 0) return;
+
+  if (type === 'shield') {
+    shieldActive = true;
+    inv.shield--;
+    showMsg('🛡️ Shield active! Next snake is blocked.');
+  } else if (type === 'extraRoll') {
+    extraRollActive = true;
+    inv.extraRoll--;
+    showMsg('🎲 Extra roll ready! Roll again after this.');
+  } else if (type === 'sabotage') {
+    inv.sabotage--;
+    // Push opponent back 5 spaces
+    const others = players.map((p,i)=>i).filter(i=>i!==currentPlayer && players[i].pos > 0);
+    if (others.length) {
+      const target = others[Math.floor(Math.random()*others.length)];
+      players[target].pos = Math.max(0, players[target].pos - 5);
+      showMsg(`💣 P${target+1} pushed back 5 spaces!`);
+    }
+  }
+  renderPowerups();
+}
+
+function rollDice() {
+  if (!gameActive) return;
+  const btn = document.getElementById('rollBtn');
+  btn.disabled = true;
+
+  const dice = document.getElementById('dice');
+  dice.classList.add('rolling');
+
+  let rolls = 0;
+  const anim = setInterval(() => {
+    dice.textContent = Math.floor(Math.random()*6)+1;
+    rolls++;
+    if (rolls > 8) {
+      clearInterval(anim);
+      dice.classList.remove('rolling');
+      const result = Math.floor(Math.random()*6)+1;
+      dice.textContent = result;
+      movePlayer(result);
+    }
+  }, 80);
+}
+
+async function movePlayer(steps) {
+  const p = players[currentPlayer];
+  let newPos = Math.min(p.pos + steps, BOARD_SIZE);
+
+  // Animate step by step
+  for (let i = p.pos + 1; i <= newPos; i++) {
+    p.pos = i;
+    renderPlayers();
+    await sleep(150);
+  }
+
+  const {snakes, ladders} = getSnakesAndLadders();
+
+  // Check ladder
+  if (ladders[p.pos]) {
+    showMsg(`🪜 Tangga! Naik ke ${ladders[p.pos]}!`);
+    await sleep(800);
+    p.pos = ladders[p.pos];
+    renderPlayers();
+  }
+
+  // Check snake
+  if (snakes[p.pos]) {
+    if (shieldActive) {
+      shieldActive = false;
+      showMsg('🛡️ Shield blocked the snake!');
+    } else {
+      showMsg(`🐍 Ular! Turun ke ${snakes[p.pos]}`);
+      await sleep(800);
+      p.pos = snakes[p.pos];
+      renderPlayers();
+    }
+  }
+
+  // Check win
+  if (p.pos >= BOARD_SIZE) {
+    gameActive = false;
+    if (chaosTimer) clearInterval(chaosTimer);
+    document.getElementById('winTitle').textContent = `${p.emoji} Player ${currentPlayer+1} Wins!`;
+    document.getElementById('winText').textContent = 'Selamat! Kamu raja Ular Tangga!';
+    document.getElementById('winOverlay').style.display = 'flex';
+    renderPlayers();
+    return;
+  }
+
+  // Extra roll
+  if (extraRollActive) {
+    extraRollActive = false;
+    showMsg('🎲 Extra roll! Roll again!');
+    document.getElementById('rollBtn').disabled = false;
+    return;
+  }
+
+  // Next turn
+  nextTurn();
+}
+
+function nextTurn() {
+  currentPlayer = (currentPlayer + 1) % players.length;
+  updateTurn();
+  renderPowerups();
+
+  // AI turn
+  if (aiPlayers.has(currentPlayer)) {
+    setTimeout(() => {
+      if (gameActive) rollDice();
+    }, 800);
+  } else {
+    document.getElementById('rollBtn').disabled = false;
+  }
+}
+
+function updateTurn() {
+  const p = players[currentPlayer];
+  const isAI = aiPlayers.has(currentPlayer);
+  document.getElementById('turnInfo').textContent = `${p.emoji} Player ${currentPlayer+1}'s Turn${isAI ? ' 🤖' : ''}`;
+  renderPlayers();
+}
+
+function shuffleSnakesAndLadders() {
+  // In chaos mode, randomly move one snake or ladder
+  showMsg('🌪️ Snakes & Ladders are moving!');
+}
+
+function showMsg(text) {
+  const existing = document.querySelector('.msg');
+  if (existing) existing.remove();
+
+  const el = document.createElement('div');
+  el.className = 'msg';
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1500);
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>

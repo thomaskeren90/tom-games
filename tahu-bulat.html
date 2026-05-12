@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Tahu Bulat Tycoon</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#1a0a00;color:#fff;overflow:hidden;height:100vh;user-select:none}
+.top-bar{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:rgba(0,0,0,0.3)}
+.money{font-size:1.4em;font-weight:800;color:#ffd700}
+.level-info{font-size:0.8em;color:#ffa726}
+.game-area{position:relative;height:calc(100vh - 180px);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.cart{font-size:5em;cursor:pointer;transition:transform 0.1s;filter:drop-shadow(0 4px 20px rgba(255,165,0,0.4))}
+.cart:active{transform:scale(0.9)}
+.cart-level{font-size:0.9em;color:#ffa726;margin-top:8px;text-align:center}
+.tahu{position:absolute;font-size:1.5em;pointer-events:none;animation:float-up 1.2s ease-out forwards}
+@keyframes float-up{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-120px) scale(0.5)}}
+.per-sec{color:#aaa;font-size:0.85em;margin-top:4px}
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(10px);display:flex;justify-content:space-around;padding:10px 8px}
+.tab{display:flex;flex-direction:column;align-items:center;font-size:0.7em;color:#888;cursor:pointer;padding:4px 12px;border-radius:10px}
+.tab.active{color:#ffd700;background:rgba(255,215,0,0.1)}
+.tab-icon{font-size:1.5em;margin-bottom:2px}
+.panel{position:fixed;bottom:70px;left:0;right:0;background:rgba(20,10,0,0.95);border-top:1px solid rgba(255,165,0,0.2);padding:16px;max-height:50vh;overflow-y:auto;display:none;border-radius:16px 16px 0 0}
+.panel.show{display:block}
+.upgrade{display:flex;align-items:center;justify-content:space-between;padding:12px;margin:8px 0;background:rgba(255,255,255,0.05);border-radius:12px;border:1px solid rgba(255,165,0,0.1)}
+.upgrade-info{flex:1}
+.upgrade-name{font-weight:700;font-size:0.95em}
+.upgrade-desc{font-size:0.75em;color:#999;margin-top:2px}
+.upgrade-effect{font-size:0.7em;color:#4caf50;margin-top:2px}
+.upgrade-cost{background:linear-gradient(135deg,#f5af19,#f12711);border:none;color:#fff;padding:8px 16px;border-radius:20px;font-weight:700;font-size:0.85em;cursor:pointer;white-space:nowrap}
+.upgrade-cost:disabled{opacity:0.4;cursor:default}
+.welcome{position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(5px)}
+.welcome-card{background:#1a0a00;border:2px solid #f5af19;border-radius:20px;padding:30px;text-align:center;max-width:320px}
+.welcome-card h2{color:#ffd700;margin-bottom:10px}
+.welcome-card p{color:#ccc;font-size:0.9em;margin-bottom:6px}
+.welcome-card .earned{font-size:2em;color:#ffd700;font-weight:900;margin:15px 0}
+.welcome-btn{background:linear-gradient(135deg,#f5af19,#f12711);border:none;color:#fff;padding:12px 30px;border-radius:25px;font-size:1em;font-weight:700;cursor:pointer;margin-top:10px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px}
+.stat{background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;text-align:center}
+.stat-val{font-size:1.4em;font-weight:800;color:#ffd700}
+.stat-label{font-size:0.7em;color:#888;margin-top:4px}
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <div class="money">Rp <span id="money">0</span></div>
+  <div class="level-info">Level <span id="level">1</span></div>
+</div>
+
+<div class="game-area" id="gameArea">
+  <div class="cart" id="cart" onclick="sell()">🟡</div>
+  <div class="cart-level" id="cartLabel">Gerobak Tahu</div>
+  <div class="per-sec">+Rp <span id="eps">0</span>/sec</div>
+</div>
+
+<div class="bottom-bar">
+  <div class="tab active" onclick="showPanel('upgrades')"><div class="tab-icon">⬆️</div>Upgrade</div>
+  <div class="tab" onclick="showPanel('stats')"><div class="tab-icon">📊</div>Stats</div>
+</div>
+
+<div class="panel" id="panel-upgrades">
+  <div id="upgrades"></div>
+</div>
+<div class="panel" id="panel-stats">
+  <div class="stats">
+    <div class="stat"><div class="stat-val" id="totalEarned">0</div><div class="stat-label">Total Earned</div></div>
+    <div class="stat"><div class="stat-val" id="totalTaps">0</div><div class="stat-label">Total Taps</div></div>
+    <div class="stat"><div class="stat-val" id="tapPower">1</div><div class="stat-label">Rp per Tap</div></div>
+    <div class="stat"><div class="stat-val" id="autoRate">0</div><div class="stat-label">Rp per Second</div></div>
+  </div>
+</div>
+
+<div class="welcome" id="welcome" style="display:none">
+  <div class="welcome-card">
+    <h2>🎉 Selamat Datang Kembali!</h2>
+    <p>Saat kamu pergi, tahu tetap laku...</p>
+    <div class="earned">+Rp <span id="offlineEarnings">0</span></div>
+    <p style="font-size:0.8em;color:#888">Pendapatan offline</p>
+    <button class="welcome-btn" onclick="closeWelcome()">Ambil!</button>
+  </div>
+</div>
+
+<script>
+const UPGRADES = [
+  {id:'tap',name:'Sambal Pedas',desc:'Tahu lebih pedas, lebih laku!',baseCost:10,costMult:1.5,effect:()=>state.tapPower+=1,label:'+1 Rp/tap'},
+  {id:'auto1',name:'Kipas Angin',desc:'Angin sepoi bawa aroma tahu ke mana-mana',baseCost:50,costMult:1.6,effect:()=>state.autoRate+=1,label:'+1 Rp/detik'},
+  {id:'tap2',name:'Resep Baru',desc:'Tahu isi, tahu sumedang, tahu berontak!',baseCost:200,costMult:1.7,effect:()=>state.tapPower+=3,label:'+3 Rp/tap'},
+  {id:'auto2',name:'Speaker Keliling',desc:'"Tahu bulaaat... tahu bulaaat..."',baseCost:500,costMult:1.7,effect:()=>state.autoRate+=5,label:'+5 Rp/detik'},
+  {id:'tap3',name:'Es Teh Gratis',desc:'Beli tahu dapat es teh, pelanggan betah!',baseCost:2000,costMult:1.8,effect:()=>state.tapPower+=10,label:'+10 Rp/tap'},
+  {id:'auto3',name:'Gerobak Motor',desc:'Jualan keliling kampung',baseCost:5000,costMult:1.8,effect:()=>state.autoRate+=20,label:'+20 Rp/detik'},
+  {id:'auto4',name:'GoFood Online',desc:'Tahu bulat sekarang bisa delivery!',baseCost:20000,costMult:1.9,effect:()=>state.autoRate+=80,label:'+80 Rp/detik'},
+  {id:'tap4',name:'Gorengan Lengkap',desc:'Tempe, bakwan, pisang goreng — full menu!',baseCost:50000,costMult:2.0,effect:()=>state.tapPower+=50,label:'+50 Rp/tap'},
+  {id:'auto5',name:'Franchise Nasional',desc:'Tahu Bulat cabang di seluruh Indonesia!',baseCost:200000,costMult:2.0,effect:()=>state.autoRate+=300,label:'+300 Rp/detik'},
+  {id:'auto6',name:'Raja Tahu Indonesia',desc:'Kerajaan tahu terbesar se-Asia Tenggara!',baseCost:1000000,costMult:2.2,effect:()=>state.autoRate+=1500,label:'+1500 Rp/detik'},
+];
+
+const CART_STYLES = [
+  {min:0,emoji:'🟡',label:'Gerobak Tahu'},
+  {min:500,emoji:'🟠',label:'Gerobak Upgrade'},
+  {min:5000,emoji:'🏪',label:'Warung Tahu'},
+  {min:50000,emoji:'🏬',label:'Restoran Tahu'},
+  {min:500000,emoji:'🏢',label:'Kantor Franchise'},
+  {min:5000000,emoji:'👑',label:'Kerajaan Tahu'},
+];
+
+let state = {
+  money: 0, tapPower: 1, autoRate: 0, totalEarned: 0, totalTaps: 0,
+  upgradeLevels: {}, lastSave: Date.now(), level: 1
+};
+
+function fmt(n) {
+  if (n >= 1e12) return (n/1e12).toFixed(1)+'T';
+  if (n >= 1e9) return (n/1e9).toFixed(1)+'B';
+  if (n >= 1e6) return (n/1e6).toFixed(1)+'M';
+  if (n >= 1e3) return (n/1e3).toFixed(1)+'K';
+  return Math.floor(n).toString();
+}
+
+function sell() {
+  const earned = state.tapPower;
+  state.money += earned;
+  state.totalEarned += earned;
+  state.totalTaps++;
+  spawnTahu('+' + fmt(earned));
+  updateUI();
+}
+
+function spawnTahu(text) {
+  const el = document.createElement('div');
+  el.className = 'tahu';
+  el.textContent = text;
+  const area = document.getElementById('gameArea');
+  el.style.left = (40 + Math.random()*20) + '%';
+  el.style.top = (30 + Math.random()*20) + '%';
+  el.style.color = '#ffd700';
+  el.style.fontWeight = '900';
+  el.style.fontSize = '1.2em';
+  area.appendChild(el);
+  setTimeout(() => el.remove(), 1200);
+}
+
+function getUpgradeCost(u) {
+  const lvl = state.upgradeLevels[u.id] || 0;
+  return Math.floor(u.baseCost * Math.pow(u.costMult, lvl));
+}
+
+function buyUpgrade(u) {
+  const cost = getUpgradeCost(u);
+  if (state.money < cost) return;
+  state.money -= cost;
+  state.upgradeLevels[u.id] = (state.upgradeLevels[u.id]||0) + 1;
+  u.effect();
+  updateUI();
+  renderUpgrades();
+}
+
+function renderUpgrades() {
+  const el = document.getElementById('upgrades');
+  el.innerHTML = UPGRADES.map(u => {
+    const cost = getUpgradeCost(u);
+    const lvl = state.upgradeLevels[u.id] || 0;
+    const canBuy = state.money >= cost;
+    return `<div class="upgrade">
+      <div class="upgrade-info">
+        <div class="upgrade-name">${u.name} ${lvl > 0 ? 'Lv.'+lvl : ''}</div>
+        <div class="upgrade-desc">${u.desc}</div>
+        <div class="upgrade-effect">${u.label}</div>
+      </div>
+      <button class="upgrade-cost" ${canBuy?'':'disabled'} onclick="buyUpgrade(UPGRADES.find(x=>x.id==='${u.id}'))">Rp ${fmt(cost)}</button>
+    </div>`;
+  }).join('');
+}
+
+function updateUI() {
+  document.getElementById('money').textContent = fmt(state.money);
+  document.getElementById('level').textContent = state.level;
+  document.getElementById('eps').textContent = fmt(state.autoRate);
+  document.getElementById('totalEarned').textContent = fmt(state.totalEarned);
+  document.getElementById('totalTaps').textContent = fmt(state.totalTaps);
+  document.getElementById('tapPower').textContent = fmt(state.tapPower);
+  document.getElementById('autoRate').textContent = fmt(state.autoRate);
+
+  // Update cart visual
+  let cartStyle = CART_STYLES[0];
+  for (const cs of CART_STYLES) {
+    if (state.totalEarned >= cs.min) cartStyle = cs;
+  }
+  document.getElementById('cart').textContent = cartStyle.emoji;
+  document.getElementById('cartLabel').textContent = cartStyle.label;
+
+  // Level
+  state.level = Math.floor(Math.log10(state.totalEarned + 1)) + 1;
+}
+
+function showPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('show'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  const panel = document.getElementById('panel-'+name);
+  if (panel.classList.contains('show')) {
+    panel.classList.remove('show');
+  } else {
+    panel.classList.add('show');
+  }
+  event.currentTarget.classList.add('active');
+  if (name === 'upgrades') renderUpgrades();
+}
+
+function save() {
+  state.lastSave = Date.now();
+  localStorage.setItem('tahu-bulat', JSON.stringify(state));
+}
+
+function load() {
+  const raw = localStorage.getItem('tahu-bulat');
+  if (!raw) return;
+  const saved = JSON.parse(raw);
+  Object.assign(state, saved);
+
+  // Re-apply upgrade effects
+  state.tapPower = 1;
+  state.autoRate = 0;
+  UPGRADES.forEach(u => {
+    const lvl = state.upgradeLevels[u.id] || 0;
+    for (let i = 0; i < lvl; i++) u.effect();
+  });
+
+  // Offline earnings
+  const elapsed = (Date.now() - state.lastSave) / 1000;
+  if (elapsed > 60 && state.autoRate > 0) {
+    const offline = Math.floor(state.autoRate * elapsed * 0.5); // 50% offline efficiency
+    if (offline > 0) {
+      state.money += offline;
+      state.totalEarned += offline;
+      document.getElementById('offlineEarnings').textContent = fmt(offline);
+      document.getElementById('welcome').style.display = 'flex';
+    }
+  }
+}
+
+function closeWelcome() {
+  document.getElementById('welcome').style.display = 'none';
+}
+
+// Auto-earn loop
+setInterval(() => {
+  if (state.autoRate > 0) {
+    state.money += state.autoRate;
+    state.totalEarned += state.autoRate;
+    updateUI();
+  }
+}, 1000);
+
+// Save every 5s
+setInterval(save, 5000);
+
+// Auto-save on leave
+window.addEventListener('beforeunload', save);
+
+load();
+updateUI();
+renderUpgrades();
+</script>
+</body>
+</html>
