@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Blok Susun</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(135deg,#0a0a2a,#1a1a3a);color:#fff;overflow:hidden;height:100vh;user-select:none;touch-action:none}
+.top-bar{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:rgba(0,0,0,0.3)}
+.score-area{display:flex;gap:12px}
+.score-box{background:rgba(124,77,255,0.15);border:1px solid rgba(124,77,255,0.25);padding:4px 12px;border-radius:10px;text-align:center}
+.score-label{font-size:0.6em;color:#b388ff}
+.score-val{font-size:1.1em;font-weight:800;color:#e040fb}
+.combo{font-size:0.8em;color:#ffd700;min-width:50px;text-align:right}
+.game-area{display:flex;flex-direction:column;align-items:center;padding:10px;height:calc(100vh - 120px)}
+.board{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;background:rgba(0,0,0,0.3);padding:6px;border-radius:12px;width:min(85vw,340px);aspect-ratio:1}
+.cell{border-radius:6px;background:rgba(255,255,255,0.03);aspect-ratio:1;transition:background 0.15s}
+.cell.filled{background:var(--fill-color,#7c4dff);box-shadow:inset 0 0 8px rgba(255,255,255,0.15)}
+.cell.clearing{animation:clear-flash 0.4s ease}
+@keyframes clear-flash{0%{background:#fff}100%{background:rgba(255,255,255,0.03)}}
+.pieces-area{display:flex;gap:10px;justify-content:center;margin-top:12px;padding:8px;min-height:90px}
+.piece{display:grid;gap:2px;cursor:grab;padding:4px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05);transition:all 0.2s}
+.piece:active{cursor:grabbing;transform:scale(0.95)}
+.piece.disabled{opacity:0.25;pointer-events:none}
+.piece-cell{width:18px;height:18px;border-radius:3px;background:var(--piece-color,#7c4dff)}
+.bottom{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;gap:10px;padding:10px;background:rgba(0,0,0,0.3)}
+.action-btn{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#fff;padding:8px 14px;border-radius:16px;font-size:0.75em;cursor:pointer}
+.action-btn:disabled{opacity:0.3;cursor:default}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:50;backdrop-filter:blur(5px)}
+.overlay-card{background:rgba(10,10,40,0.95);border:2px solid rgba(124,77,255,0.3);border-radius:20px;padding:28px;text-align:center;max-width:300px;width:90%}
+.overlay-card h1{margin-bottom:8px}
+.final-score{font-size:2.5em;font-weight:900;color:#e040fb;margin:8px 0}
+.btn{background:linear-gradient(135deg,#e040fb,#7c4dff);border:none;color:#fff;padding:12px 28px;border-radius:25px;font-size:1em;font-weight:700;cursor:pointer;margin-top:8px}
+.city-badge{font-size:0.75em;color:#b388ff}
+.level-bar{width:100%;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin-top:6px}
+.level-fill{height:100%;background:linear-gradient(90deg,#e040fb,#7c4dff);border-radius:2px;transition:width 0.3s}
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <div class="score-area">
+    <div class="score-box"><div class="score-label">Score</div><div class="score-val" id="score">0</div></div>
+    <div class="score-box"><div class="score-label">Best</div><div class="score-val" id="best">0</div></div>
+  </div>
+  <div class="combo" id="combo"></div>
+</div>
+
+<div class="game-area">
+  <div class="city-badge" id="cityBadge">🏙️ Jakarta — Level 1</div>
+  <div class="level-bar"><div class="level-fill" id="levelFill" style="width:0%"></div></div>
+  <div class="board" id="board" style="margin-top:10px"></div>
+  <div class="pieces-area" id="pieces"></div>
+</div>
+
+<div class="bottom">
+  <button class="action-btn" onclick="useUndo()" id="undoBtn">↩️ Undo (<span id="undos">1</span>)</button>
+  <button class="action-btn" onclick="restartGame()">🔄 New</button>
+</div>
+
+<div class="overlay" id="gameOverOverlay" style="display:none">
+  <div class="overlay-card">
+    <h1>😔 Papan Penuh</h1>
+    <div class="final-score" id="finalScore">0</div>
+    <p id="cityReached" style="color:#b388ff"></p>
+    <p id="newBest" style="color:#ffd700;display:none">🏆 Rekor Baru!</p>
+    <button class="btn" onclick="restartGame()">Main Lagi</button>
+  </div>
+</div>
+
+<script>
+const GRID = 8;
+const COLORS = ['#7c4dff','#e040fb','#00bcd4','#ffd740','#ff5252','#69f0ae','#448aff','#ff6e40'];
+const CITIES = [
+  {name:'🏙️ Jakarta',target:500},
+  {name:'🌴 Surabaya',target:1500},
+  {name:'🏖️ Bali',target:3000},
+  {name:'🏛️ Yogyakarta',target:5000},
+  {name:'🌋 Bandung',target:8000},
+  {name:'🏯 Solo',target:12000},
+  {name:'🌊 Manado',target:18000},
+  {name:'🏔️ Papua',target:25000},
+];
+
+// Block shapes (row, col offsets)
+const SHAPES = [
+  // Single
+  [[0,0]],
+  // Line 2
+  [[0,0],[0,1]], [[0,0],[1,0]],
+  // Line 3
+  [[0,0],[0,1],[0,2]], [[0,0],[1,0],[2,0]],
+  // Line 4
+  [[0,0],[0,1],[0,2],[0,3]], [[0,0],[1,0],[2,0],[3,0]],
+  // L shapes
+  [[0,0],[1,0],[1,1]], [[0,0],[0,1],[1,0]], [[0,0],[0,1],[1,1]], [[0,1],[1,0],[1,1]],
+  // Square
+  [[0,0],[0,1],[1,0],[1,1]],
+  // T shapes
+  [[0,0],[0,1],[0,2],[1,1]], [[0,0],[1,0],[2,0],[1,1]],
+  // Z shapes
+  [[0,0],[0,1],[1,1],[1,2]], [[0,1],[0,2],[1,0],[1,1]],
+  // Big L
+  [[0,0],[1,0],[2,0],[2,1]], [[0,0],[0,1],[0,2],[1,0]],
+  // Plus
+  [[0,1],[1,0],[1,1],[1,2],[2,1]],
+];
+
+let board, score, best, comboCount, undos, history, currentPieces, level, cityIndex;
+
+function init() {
+  board = Array.from({length:GRID}, () => Array(GRID).fill(null));
+  score = 0; comboCount = 0; undos = 1; history = [];
+  level = 1; cityIndex = 0;
+  best = parseInt(localStorage.getItem('blok-best')) || 0;
+  document.getElementById('score').textContent = 0;
+  document.getElementById('best').textContent = best;
+  document.getElementById('undos').textContent = undos;
+  document.getElementById('undoBtn').disabled = false;
+  generatePieces();
+  render();
+  renderPieces();
+  updateCity();
+}
+
+function generatePieces() {
+  currentPieces = [];
+  for (let i = 0; i < 3; i++) {
+    const shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+    const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+    currentPieces.push({shape, color, used: false});
+  }
+}
+
+function render() {
+  const boardEl = document.getElementById('board');
+  boardEl.innerHTML = '';
+  for (let r = 0; r < GRID; r++) {
+    for (let c = 0; c < GRID; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      if (board[r][c]) {
+        cell.classList.add('filled');
+        cell.style.setProperty('--fill-color', board[r][c]);
+      }
+      boardEl.appendChild(cell);
+    }
+  }
+}
+
+function renderPieces() {
+  const el = document.getElementById('pieces');
+  el.innerHTML = currentPieces.map((p, pi) => {
+    if (p.used) return '<div style="width:80px"></div>';
+    const maxR = Math.max(...p.shape.map(s=>s[0])) + 1;
+    const maxC = Math.max(...p.shape.map(s=>s[1])) + 1;
+    let html = `<div class="piece" draggable="true" data-piece="${pi}" 
+      style="--piece-color:${p.color};grid-template-columns:repeat(${maxC},1fr)"
+      ondragstart="dragStart(event,${pi})" ontouchstart="touchStart(event,${pi})">`;
+    for (let r = 0; r < maxR; r++) {
+      for (let c = 0; c < maxC; c++) {
+        const filled = p.shape.some(s=>s[0]===r&&s[1]===c);
+        html += `<div class="piece-cell" style="${filled?`background:${p.color}`:'background:transparent'}"></div>`;
+      }
+    }
+    html += '</div>';
+    return html;
+  }).join('');
+}
+
+let dragPiece = null;
+let ghostCells = [];
+
+function dragStart(e, pi) { dragPiece = pi; }
+
+// Touch handling
+let touchPiece = null, touchStartX, touchStartY;
+function touchStart(e, pi) {
+  touchPiece = pi;
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+  e.preventDefault();
+}
+
+document.addEventListener('touchmove', e => {
+  if (touchPiece === null) return;
+  e.preventDefault();
+  const x = e.touches[0].clientX;
+  const y = e.touches[0].clientY;
+  highlightDrop(x, y, touchPiece);
+});
+
+document.addEventListener('touchend', e => {
+  if (touchPiece === null) return;
+  const x = e.changedTouches[0].clientX;
+  const y = e.changedTouches[0].clientY;
+  tryPlace(x, y, touchPiece);
+  clearHighlight();
+  touchPiece = null;
+});
+
+// Mouse handling
+document.getElementById('board').addEventListener('dragover', e => {
+  e.preventDefault();
+  if (dragPiece !== null) highlightDrop(e.clientX, e.clientY, dragPiece);
+});
+
+document.getElementById('board').addEventListener('drop', e => {
+  e.preventDefault();
+  if (dragPiece !== null) {
+    tryPlace(e.clientX, e.clientY, dragPiece);
+    clearHighlight();
+    dragPiece = null;
+  }
+});
+
+function getGridPos(clientX, clientY) {
+  const boardEl = document.getElementById('board');
+  const rect = boardEl.getBoundingClientRect();
+  const cellSize = rect.width / GRID;
+  const c = Math.floor((clientX - rect.left) / cellSize);
+  const r = Math.floor((clientY - rect.top) / cellSize);
+  return {r, c};
+}
+
+function highlightDrop(clientX, clientY, pi) {
+  clearHighlight();
+  const pos = getGridPos(clientX, clientY);
+  const piece = currentPieces[pi];
+  if (!piece || piece.used) return;
+
+  const cells = document.querySelectorAll('.cell');
+  const canPlace = canPlacePiece(piece.shape, pos.r, pos.c);
+
+  piece.shape.forEach(([dr, dc]) => {
+    const r = pos.r + dr, c = pos.c + dc;
+    if (r >= 0 && r < GRID && c >= 0 && c < GRID) {
+      const cell = cells[r * GRID + c];
+      cell.style.outline = canPlace ? '2px solid #69f0ae' : '2px solid #ff5252';
+      if (canPlace) cell.style.background = 'rgba(105,240,174,0.2)';
+    }
+  });
+}
+
+function clearHighlight() {
+  document.querySelectorAll('.cell').forEach(c => {
+    c.style.outline = '';
+    if (!board[Math.floor([...document.querySelectorAll('.cell')].indexOf(c)/GRID)][[...document.querySelectorAll('.cell')].indexOf(c)%GRID]) {
+      c.style.background = '';
+    }
+  });
+  render();
+}
+
+function canPlacePiece(shape, startR, startC) {
+  return shape.every(([dr, dc]) => {
+    const r = startR + dr, c = startC + dc;
+    return r >= 0 && r < GRID && c >= 0 && c < GRID && !board[r][c];
+  });
+}
+
+function tryPlace(clientX, clientY, pi) {
+  const pos = getGridPos(clientX, clientY);
+  const piece = currentPieces[pi];
+  if (!piece || piece.used) return;
+  if (!canPlacePiece(piece.shape, pos.r, pos.c)) return;
+
+  // Save state for undo
+  history.push({
+    board: board.map(r => [...r]),
+    score, comboCount
+  });
+  if (history.length > 5) history.shift();
+
+  // Place piece
+  piece.shape.forEach(([dr, dc]) => {
+    board[pos.r + dr][pos.c + dc] = piece.color;
+  });
+  piece.used = true;
+
+  // Score
+  const pts = piece.shape.length * 10;
+  score += pts;
+
+  // Check and clear lines
+  const cleared = clearLines();
+  if (cleared > 0) {
+    comboCount++;
+    const lineBonus = cleared * 100 * comboCount;
+    score += lineBonus;
+    document.getElementById('combo').textContent = comboCount > 1 ? `${comboCount}x Combo!` : '';
+  } else {
+    comboCount = 0;
+    document.getElementById('combo').textContent = '';
+  }
+
+  document.getElementById('score').textContent = score;
+  document.getElementById('undos').textContent = undos;
+
+  // Generate new pieces if all used
+  if (currentPieces.every(p => p.used)) {
+    generatePieces();
+  }
+
+  render();
+  renderPieces();
+  updateCity();
+
+  // Check game over
+  if (!canPlaceAny()) {
+    gameOver();
+  }
+}
+
+function clearLines() {
+  let cleared = 0;
+  const toClear = [];
+
+  // Check rows
+  for (let r = 0; r < GRID; r++) {
+    if (board[r].every(c => c !== null)) {
+      for (let c = 0; c < GRID; c++) toClear.push(r * GRID + c);
+      cleared++;
+    }
+  }
+
+  // Check columns
+  for (let c = 0; c < GRID; c++) {
+    let full = true;
+    for (let r = 0; r < GRID; r++) {
+      if (!board[r][c]) { full = false; break; }
+    }
+    if (full) {
+      for (let r = 0; r < GRID; r++) toClear.push(r * GRID + c);
+      cleared++;
+    }
+  }
+
+  // Clear
+  const uniqueClear = [...new Set(toClear)];
+  uniqueClear.forEach(idx => {
+    const r = Math.floor(idx / GRID), c = idx % GRID;
+    board[r][c] = null;
+  });
+
+  // Animate
+  if (uniqueClear.length > 0) {
+    const cells = document.querySelectorAll('.cell');
+    uniqueClear.forEach(idx => {
+      cells[idx].classList.add('clearing');
+    });
+    setTimeout(() => render(), 400);
+  }
+
+  return cleared;
+}
+
+function canPlaceAny() {
+  for (const piece of currentPieces) {
+    if (piece.used) continue;
+    for (let r = 0; r < GRID; r++) {
+      for (let c = 0; c < GRID; c++) {
+        if (canPlacePiece(piece.shape, r, c)) return true;
+      }
+    }
+  }
+  return false;
+}
+
+function useUndo() {
+  if (undos <= 0 || history.length === 0) return;
+  const prev = history.pop();
+  board = prev.board;
+  score = prev.score;
+  comboCount = prev.comboCount;
+  undos--;
+  document.getElementById('score').textContent = score;
+  document.getElementById('undos').textContent = undos;
+  document.getElementById('undoBtn').disabled = undos <= 0;
+  // Regenerate pieces
+  generatePieces();
+  render();
+  renderPieces();
+}
+
+function updateCity() {
+  cityIndex = 0;
+  for (let i = 0; i < CITIES.length; i++) {
+    if (score >= CITIES[i].target) cityIndex = i;
+  }
+  document.getElementById('cityBadge').textContent = `${CITIES[cityIndex].name} — Level ${cityIndex + 1}`;
+  const nextTarget = CITIES[Math.min(cityIndex + 1, CITIES.length - 1)].target;
+  const prevTarget = CITIES[cityIndex].target;
+  const progress = Math.min(100, ((score - prevTarget) / (nextTarget - prevTarget)) * 100);
+  document.getElementById('levelFill').style.width = progress + '%';
+}
+
+function gameOver() {
+  const isNewBest = score > best;
+  if (isNewBest) {
+    best = score;
+    localStorage.setItem('blok-best', best);
+  }
+  document.getElementById('finalScore').textContent = score;
+  document.getElementById('cityReached').textContent = `Mencapai ${CITIES[cityIndex].name}`;
+  document.getElementById('newBest').style.display = isNewBest ? 'block' : 'none';
+  document.getElementById('gameOverOverlay').style.display = 'flex';
+}
+
+function restartGame() {
+  document.getElementById('gameOverOverlay').style.display = 'none';
+  init();
+}
+
+init();
+</script>
+</body>
+</html>

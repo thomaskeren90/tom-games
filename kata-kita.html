@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Kata Kita</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(135deg,#1a0a28,#0a1a28);color:#fff;min-height:100vh;user-select:none}
+.top-bar{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:rgba(0,0,0,0.3)}
+.level-info{font-size:1.1em;font-weight:700;color:#ff9800}
+.score-area{display:flex;gap:10px}
+.score-box{background:rgba(255,152,0,0.12);border:1px solid rgba(255,152,0,0.2);padding:4px 10px;border-radius:10px;text-align:center}
+.score-label{font-size:0.6em;color:#ffb74d}
+.score-val{font-size:1em;font-weight:800;color:#ff9800}
+.words-found{padding:10px 16px;background:rgba(0,0,0,0.15)}
+.found-words{display:flex;flex-wrap:wrap;gap:6px}
+.found-word{background:rgba(255,152,0,0.15);border:1px solid rgba(255,152,0,0.2);padding:3px 10px;border-radius:12px;font-size:0.75em;color:#ff9800}
+.hidden-word{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);padding:3px 10px;border-radius:12px;font-size:0.75em;color:#555}
+.letters-area{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;padding:20px 16px}
+.letter{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3em;font-weight:800;cursor:pointer;background:rgba(255,152,0,0.1);border:2px solid rgba(255,152,0,0.2);transition:all 0.15s;color:#ff9800}
+.letter:active{transform:scale(0.9)}
+.letter.used{background:rgba(255,152,0,0.3);border-color:#ff9800;color:#fff}
+.letter.empty{background:transparent;border-color:transparent}
+.current-word{min-height:50px;display:flex;align-items:center;justify-content:center;gap:4px;padding:10px}
+.current-letter{font-size:1.5em;font-weight:800;color:#fff;border-bottom:2px solid rgba(255,152,0,0.3);padding:2px 4px;min-width:24px;text-align:center}
+.word-slots{padding:15px 16px;display:flex;flex-direction:column;gap:6px}
+.word-slot{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid rgba(255,255,255,0.05)}
+.word-len{font-size:0.7em;color:#888;min-width:30px}
+.word-dashes{display:flex;gap:3px;flex:1}
+.dash{width:20px;height:20px;border-bottom:2px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:0.8em;color:#ff9800}
+.dash.filled{border-color:#ff9800;color:#ff9800}
+.bottom{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;gap:10px;padding:12px;background:rgba(0,0,0,0.3)}
+.action-btn{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#fff;padding:8px 14px;border-radius:16px;font-size:0.75em;cursor:pointer}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:50;backdrop-filter:blur(5px)}
+.overlay-card{background:rgba(26,10,40,0.95);border:2px solid rgba(255,152,0,0.3);border-radius:20px;padding:28px;text-align:center;max-width:300px;width:90%}
+.overlay-card h1{margin-bottom:8px}
+.overlay-card p{color:#888;font-size:0.85em;margin:4px 0}
+.btn{background:linear-gradient(135deg,#ff9800,#ff5722);border:none;color:#fff;padding:12px 28px;border-radius:25px;font-size:1em;font-weight:700;cursor:pointer;margin-top:8px}
+.category{font-size:0.8em;color:#ffb74d;margin:5px 0}
+.hint-area{display:flex;justify-content:center;gap:8px;margin:5px 0}
+.hint-btn{background:rgba(255,152,0,0.1);border:1px solid rgba(255,152,0,0.2);color:#ff9800;padding:6px 14px;border-radius:12px;font-size:0.75em;cursor:pointer}
+.hint-btn:disabled{opacity:0.3}
+.blitz-timer{font-size:2em;font-weight:900;color:#ff5252;text-align:center;padding:10px}
+.mode-tabs{display:flex;gap:8px;justify-content:center;padding:8px}
+.mode-tab{padding:6px 14px;border-radius:12px;font-size:0.8em;cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#888}
+.mode-tab.active{background:rgba(255,152,0,0.2);border-color:#ff9800;color:#ff9800}
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <div class="level-info">Level <span id="level">1</span></div>
+  <div class="score-area">
+    <div class="score-box"><div class="score-label">Score</div><div class="score-val" id="score">0</div></div>
+    <div class="score-box"><div class="score-label">Hints</div><div class="score-val" id="hints">3</div></div>
+  </div>
+</div>
+
+<div class="mode-tabs">
+  <div class="mode-tab active" onclick="setMode('level')">📝 Levels</div>
+  <div class="mode-tab" onclick="setMode('blitz')">⚡ Blitz</div>
+  <div class="mode-tab" onclick="setMode('daily')">📅 Daily</div>
+</div>
+
+<div class="category" id="category" style="text-align:center"></div>
+<div class="word-slots" id="wordSlots"></div>
+<div class="current-word" id="currentWord"></div>
+<div class="letters-area" id="letters"></div>
+
+<div class="hint-area">
+  <button class="hint-btn" onclick="useHint()">💡 Hint (<span id="hintCount">3</span>)</button>
+  <button class="hint-btn" onclick="shuffleLetters()">🔀 Shuffle</button>
+  <button class="hint-btn" onclick="clearWord()">✖️ Clear</button>
+</div>
+
+<div class="bottom">
+  <button class="action-btn" onclick="submitWord()">✅ Submit</button>
+  <button class="action-btn" onclick="restartLevel()">🔄 New</button>
+</div>
+
+<div class="overlay" id="winOverlay" style="display:none">
+  <div class="overlay-card">
+    <h1>🎊 Level Beres!</h1>
+    <p>Score: <span id="winScore">0</span></p>
+    <p id="bonusInfo" style="color:#ff9800"></p>
+    <button class="btn" onclick="nextLevel()">Next Level →</button>
+  </div>
+</div>
+
+<div class="overlay" id="blitzEndOverlay" style="display:none">
+  <div class="overlay-card">
+    <h1>⏰ Waktu Habis!</h1>
+    <p>Words found: <span id="blitzWords">0</span></p>
+    <p>Score: <span id="blitzScore">0</span></p>
+    <button class="btn" onclick="startBlitz()">Main Lagi</button>
+  </div>
+</div>
+
+<div class="overlay" id="menuOverlay">
+  <div class="overlay-card">
+    <h1>📝 Kata Kita</h1>
+    <p>Susun huruf jadi kata! Bilingual — English + Bahasa Indonesia.</p>
+    <p style="color:#555;font-size:0.75em">Tap huruf untuk menyusun kata, lalu submit.</p>
+    <button class="btn" onclick="startLevelMode()">Mulai Main</button>
+  </div>
+</div>
+
+<script>
+// Word dictionary — bilingual EN/ID
+const WORD_POOLS = {
+  food: {
+    en: ['rice','noodle','sate','tempe','sambal','rendang','soto','bakso','gado','terang','durian','mango','banana','chicken','fish','egg','tofu','sauce','spice','curry'],
+    id: ['nasi','mie','sate','tempe','sambal','rendang','soto','bakso','gado','terang','durian','mangga','pisang','ayam','ikan','telur','tahu','saus','rempah','kari'],
+  },
+  animal: {
+    en: ['cat','dog','bird','fish','snake','monkey','tiger','eagle','bear','deer','frog','duck','horse','sheep','goat','lion','whale','shark','mouse','crow'],
+    id: ['kucing','anjing','burung','ikan','ular','monyet','harimau','elang','beruang','rusa','katak','bebek','kuda','domba','kambing','singa','paus','hiu','tikus','gagak'],
+  },
+  place: {
+    en: ['bali','java','papua','borneo','sumatra','sulawesi','jakarta','surabaya','bandung','yogya','solo','malang','medan','makassar','manado','semarang','bogor','depok','tangerang','bekasi'],
+    id: ['bali','jawa','papua','kalimantan','sumatera','sulawesi','jakarta','surabaya','bandung','yogya','solo','malang','medan','makassar','manado','semarang','bogor','depok','tangerang','bekasi'],
+  },
+  nature: {
+    en: ['tree','river','mountain','ocean','beach','forest','flower','cloud','rain','wind','stone','island','lake','valley','cave','reef','wave','sand','leaf','root'],
+    id: ['pohon','sungai','gunung','laut','pantai','hutan','bunga','awan','hujan','angin','batu','pulau','danau','lembah','gua','terumbu','ombak','pasir','daun','akar'],
+  },
+  general: {
+    en: ['game','play','fun','fast','slow','big','small','hot','cold','new','old','good','bad','yes','no','go','stop','run','walk','jump'],
+    id: ['main','main','seru','cepat','lambat','besar','kecil','panas','dingin','baru','lama','bagus','buruk','ya','tidak','pergi','stop','lari','jalan','lompat'],
+  },
+};
+
+let currentWords, foundWords, letters, currentLetterIndices, score, level, hintsLeft, mode, blitzTimer, blitzInterval;
+
+function init(lvl) {
+  level = lvl || 1;
+  score = score || 0;
+  hintsLeft = 3 + Math.floor(level / 3);
+  currentLetterIndices = [];
+  foundWords = [];
+  document.getElementById('level').textContent = level;
+  document.getElementById('score').textContent = score;
+  document.getElementById('hints').textContent = hintsLeft;
+  document.getElementById('hintCount').textContent = hintsLeft;
+
+  // Pick category and words
+  const categories = Object.keys(WORD_POOLS);
+  const cat = categories[(level - 1) % categories.length];
+  const numWords = Math.min(3 + Math.floor(level / 2), 6);
+
+  // Pick words from both languages
+  const allWords = [...WORD_POOLS[cat].en, ...WORD_POOLS[cat].id];
+  const shuffled = allWords.sort(() => Math.random() - 0.5);
+  currentWords = shuffled.slice(0, numWords).map(w => w.toUpperCase());
+
+  // Generate letters from all target words + extras
+  let allLetters = currentWords.join('').split('');
+  const extras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  while (allLetters.length < 12) {
+    allLetters.push(extras[Math.floor(Math.random() * extras.length)]);
+  }
+  // Shuffle
+  for (let i = allLetters.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [allLetters[i], allLetters[j]] = [allLetters[j], allLetters[i]];
+  }
+  letters = allLetters;
+
+  const categoryNames = {food:'🍜 Makanan',animal:'🐾 Hewan',place:'📍 Tempat',nature:'🌿 Alam',general:'📝 Umum'};
+  document.getElementById('category').textContent = `${categoryNames[cat]} — Level ${level}`;
+
+  renderAll();
+}
+
+function startLevelMode() {
+  document.getElementById('menuOverlay').style.display = 'none';
+  score = 0;
+  init(1);
+}
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  if (m === 'blitz') startBlitz();
+  else if (m === 'daily') startDaily();
+  else { score = 0; init(1); }
+}
+
+function startBlitz() {
+  document.getElementById('menuOverlay').style.display = 'none';
+  document.getElementById('blitzEndOverlay').style.display = 'none';
+  mode = 'blitz';
+  score = 0;
+  level = 1;
+  init(1);
+
+  // 60 second timer
+  let timeLeft = 60;
+  const timerEl = document.createElement('div');
+  timerEl.className = 'blitz-timer';
+  timerEl.id = 'blitzTimer';
+  timerEl.textContent = '60';
+  document.querySelector('.top-bar').after(timerEl);
+
+  blitzInterval = setInterval(() => {
+    timeLeft--;
+    document.getElementById('blitzTimer').textContent = timeLeft;
+    if (timeLeft <= 0) {
+      clearInterval(blitzInterval);
+      document.getElementById('blitzWords').textContent = foundWords.length;
+      document.getElementById('blitzScore').textContent = score;
+      document.getElementById('blitzEndOverlay').style.display = 'flex';
+      document.getElementById('blitzTimer').remove();
+    }
+  }, 1000);
+}
+
+function startDaily() {
+  document.getElementById('menuOverlay').style.display = 'none';
+  mode = 'daily';
+  score = 0;
+  // Use date as seed for consistent daily puzzle
+  const today = new Date().toDateString();
+  let seed = 0;
+  for (let i = 0; i < today.length; i++) seed += today.charCodeAt(i);
+  Math.random = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+  init(1);
+  Math.random = Math.random; // Reset
+}
+
+function renderAll() {
+  renderLetters();
+  renderWordSlots();
+  renderCurrentWord();
+}
+
+function renderLetters() {
+  const el = document.getElementById('letters');
+  el.innerHTML = letters.map((l, i) => {
+    const used = currentLetterIndices.includes(i);
+    return `<div class="letter ${used?'used':''}" onclick="tapLetter(${i})">${l}</div>`;
+  }).join('');
+}
+
+function renderWordSlots() {
+  const el = document.getElementById('wordSlots');
+  el.innerHTML = currentWords.map((word, wi) => {
+    const isFound = foundWords.includes(word);
+    const display = isFound ? word : '_'.repeat(word.length);
+    let dashes = '';
+    for (let i = 0; i < word.length; i++) {
+      dashes += `<div class="dash ${isFound?'filled':''}">${isFound?word[i]:word.length}</div>`;
+    }
+    return `<div class="word-slot">
+      <div class="word-len">${word.length}</div>
+      <div class="word-dashes">${dashes}</div>
+      ${isFound?'<span style="color:#4caf50;font-size:0.8em">✓</span>':''}
+    </div>`;
+  }).join('');
+}
+
+function renderCurrentWord() {
+  const el = document.getElementById('currentWord');
+  el.innerHTML = currentLetterIndices.map(i =>
+    `<div class="current-letter">${letters[i]}</div>`
+  ).join('') || '<div style="color:#555;font-size:0.85em">Tap huruf untuk menyusun kata...</div>';
+}
+
+function tapLetter(i) {
+  if (currentLetterIndices.includes(i)) {
+    currentLetterIndices = currentLetterIndices.filter(x => x !== i);
+  } else {
+    currentLetterIndices.push(i);
+  }
+  renderLetters();
+  renderCurrentWord();
+}
+
+function submitWord() {
+  const word = currentLetterIndices.map(i => letters[i]).join('');
+  if (word.length < 2) return;
+
+  if (currentWords.includes(word) && !foundWords.includes(word)) {
+    foundWords.push(word);
+    score += word.length * 10;
+    document.getElementById('score').textContent = score;
+
+    // Check level complete
+    if (foundWords.length === currentWords.length) {
+      const bonus = hintsLeft * 50;
+      score += bonus;
+      document.getElementById('score').textContent = score;
+      document.getElementById('winScore').textContent = score;
+      document.getElementById('bonusInfo').textContent = bonus > 0 ? `+${bonus} hint bonus!` : '';
+      document.getElementById('winOverlay').style.display = 'flex';
+      return;
+    }
+  }
+
+  currentLetterIndices = [];
+  renderAll();
+}
+
+function clearWord() {
+  currentLetterIndices = [];
+  renderLetters();
+  renderCurrentWord();
+}
+
+function shuffleLetters() {
+  for (let i = letters.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [letters[i], letters[j]] = [letters[j], letters[i]];
+  }
+  currentLetterIndices = [];
+  renderAll();
+}
+
+function useHint() {
+  if (hintsLeft <= 0) return;
+
+  // Find an unfound word and reveal one letter
+  const unfound = currentWords.filter(w => !foundWords.includes(w));
+  if (unfound.length === 0) return;
+
+  const word = unfound[0];
+  const letter = word[0];
+
+  // Flash the first letter position
+  hintsLeft--;
+  document.getElementById('hints').textContent = hintsLeft;
+  document.getElementById('hintCount').textContent = hintsLeft;
+
+  // Show hint as a found partial
+  alert(`💡 Hint: Kata pertama dimulai dengan "${letter}" (${word.length} huruf)`);
+}
+
+function nextLevel() {
+  document.getElementById('winOverlay').style.display = 'none';
+  init(level + 1);
+}
+
+function restartLevel() {
+  init(level);
+}
+
+// Keyboard support
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); submitWord(); }
+  if (e.key === 'Backspace') { e.preventDefault(); clearWord(); }
+  if (e.key === ' ') { e.preventDefault(); shuffleLetters(); }
+  const key = e.key.toUpperCase();
+  if (/^[A-Z]$/.test(key)) {
+    const idx = letters.findIndex((l, i) => l === key && !currentLetterIndices.includes(i));
+    if (idx !== -1) tapLetter(idx);
+  }
+});
+</script>
+</body>
+</html>

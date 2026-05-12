@@ -5,149 +5,128 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Tom Games</title>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body {
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-  min-height: 100vh;
-  color: #fff;
-  overflow-x: hidden;
-}
-.portal {
-  max-width: 500px;
-  margin: 0 auto;
-  padding: 30px 20px;
-  text-align: center;
-}
-.logo {
-  font-size: 3em;
-  font-weight: 900;
-  background: linear-gradient(135deg, #f5af19, #f12711);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin-bottom: 5px;
-  letter-spacing: -2px;
-}
-.tagline {
-  color: #8888aa;
-  font-size: 0.95em;
-  margin-bottom: 35px;
-}
-.games { display: flex; flex-direction: column; gap: 16px; }
-.game-card {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 16px;
-  padding: 18px;
-  text-decoration: none;
-  color: #fff;
-  transition: all 0.25s ease;
-  backdrop-filter: blur(10px);
-}
-.game-card:hover {
-  background: rgba(255,255,255,0.12);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
-}
-.game-card:active { transform: scale(0.98); }
-.game-icon {
-  font-size: 2.5em;
-  width: 60px;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 14px;
-  flex-shrink: 0;
-}
-.game-info { text-align: left; flex: 1; }
-.game-name {
-  font-size: 1.15em;
-  font-weight: 700;
-  margin-bottom: 3px;
-}
-.game-desc {
-  font-size: 0.8em;
-  color: #9999bb;
-  line-height: 1.3;
-}
-.game-tag {
-  font-size: 0.65em;
-  padding: 3px 8px;
-  border-radius: 20px;
-  background: rgba(255,255,255,0.1);
-  color: #aaa;
-  margin-top: 5px;
-  display: inline-block;
-}
-.i1 { background: linear-gradient(135deg, #f5af19, #f12711); }
-.i2 { background: linear-gradient(135deg, #00b09b, #96c93d); }
-.i3 { background: linear-gradient(135deg, #e040fb, #7c4dff); }
-.i4 { background: linear-gradient(135deg, #00bcd4, #2196f3); }
-.i5 { background: linear-gradient(135deg, #ff6f00, #ff9100); }
-.footer {
-  margin-top: 40px;
-  color: #555;
-  font-size: 0.75em;
-}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);min-height:100vh;color:#fff;overflow-x:hidden}
+.portal{max-width:500px;margin:0 auto;padding:30px 20px;text-align:center}
+.logo{font-size:3em;font-weight:900;background:linear-gradient(135deg,#f5af19,#f12711);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:5px;letter-spacing:-2px}
+.tagline{color:#8888aa;font-size:0.95em;margin-bottom:20px}
+.section-label{font-size:0.7em;color:#666;text-transform:uppercase;letter-spacing:2px;margin:20px 0 10px}
+.games{display:flex;flex-direction:column;gap:12px}
+.game-card{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px;text-decoration:none;color:#fff;transition:all 0.25s ease;backdrop-filter:blur(10px)}
+.game-card:hover{background:rgba(255,255,255,0.12);transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,0.3)}
+.game-card:active{transform:scale(0.98)}
+.game-icon{font-size:2em;width:50px;height:50px;display:flex;align-items:center;justify-content:center;border-radius:12px;flex-shrink:0}
+.game-info{text-align:left;flex:1}
+.game-name{font-size:1em;font-weight:700;margin-bottom:2px}
+.game-desc{font-size:0.72em;color:#9999bb;line-height:1.3}
+.game-tag{font-size:0.6em;padding:2px 7px;border-radius:20px;background:rgba(255,255,255,0.1);color:#aaa;margin-top:4px;display:inline-block}
+.i1{background:linear-gradient(135deg,#f5af19,#f12711)}
+.i2{background:linear-gradient(135deg,#00b09b,#96c93d)}
+.i3{background:linear-gradient(135deg,#e040fb,#7c4dff)}
+.i4{background:linear-gradient(135deg,#00bcd4,#2196f3)}
+.i5{background:linear-gradient(135deg,#ff6f00,#ff9100)}
+.i6{background:linear-gradient(135deg,#26c6da,#00838f)}
+.i7{background:linear-gradient(135deg,#ab47bc,#6a1b9a)}
+.i8{background:linear-gradient(135deg,#66bb6a,#2e7d32)}
+.i9{background:linear-gradient(135deg,#ffa726,#e65100)}
+.i10{background:linear-gradient(135deg,#ef5350,#b71c1c)}
+.footer{margin-top:35px;color:#444;font-size:0.7em}
 </style>
 </head>
 <body>
 <div class="portal">
   <div class="logo">TOM GAMES</div>
-  <div class="tagline">Simple games. Zero BS. Play anywhere.</div>
+  <div class="tagline">10 simple games. Zero BS. Play anywhere.</div>
 
+  <div class="section-label">Volume 1 — Indonesian Classics</div>
   <div class="games">
     <a class="game-card" href="tahu-bulat.html">
       <div class="game-icon i1">🟡</div>
       <div class="game-info">
-        <div class="game-name">Tahu Bulat Tycoon</div>
-        <div class="game-desc">Sell fried tofu, build a street food empire. Idle clicker with Indonesian flavor.</div>
-        <span class="game-tag">IDLE • CLICKER</span>
+        <div class="game-name">#1 Tahu Bulat Tycoon</div>
+        <div class="game-desc">Idle clicker. Sell fried tofu, build a street food empire.</div>
+        <span class="game-tag">IDLE</span>
       </div>
     </a>
-
     <a class="game-card" href="flappy-tap.html">
       <div class="game-icon i2">🐦</div>
       <div class="game-info">
-        <div class="game-name">Flappy Tap</div>
-        <div class="game-desc">Fly through Indonesian landmarks. Simple to learn, impossible to master.</div>
-        <span class="game-tag">ARCADE • ENDLESS</span>
+        <div class="game-name">#2 Flappy Tap</div>
+        <div class="game-desc">Endless flyer through Indonesian landmarks.</div>
+        <span class="game-tag">ARCADE</span>
       </div>
     </a>
-
     <a class="game-card" href="gem-match.html">
       <div class="game-icon i3">💎</div>
       <div class="game-info">
-        <div class="game-name">Gem Match</div>
-        <div class="game-desc">Match-3 puzzle with batik gems. No lives, no paywalls, pure puzzle.</div>
-        <span class="game-tag">PUZZLE • MATCH-3</span>
+        <div class="game-name">#3 Gem Match</div>
+        <div class="game-desc">Match-3 with batik gems. No lives, no paywalls.</div>
+        <span class="game-tag">PUZZLE</span>
       </div>
     </a>
-
     <a class="game-card" href="nomer-2048.html">
       <div class="game-icon i4">🔢</div>
       <div class="game-info">
-        <div class="game-name">Nomer 2048</div>
-        <div class="game-desc">Slide and merge Rupiah tiles. The classic puzzle with an Indonesian twist.</div>
-        <span class="game-tag">PUZZLE • BRAIN</span>
+        <div class="game-name">#4 Nomer 2048</div>
+        <div class="game-desc">Slide Rupiah tiles. Classic puzzle, Indonesian twist.</div>
+        <span class="game-tag">BRAIN</span>
       </div>
     </a>
-
     <a class="game-card" href="ular-tangga.html">
       <div class="game-icon i5">🎲</div>
       <div class="game-info">
-        <div class="game-name">Ular Tangga</div>
-        <div class="game-desc">Snakes & Ladders with power-ups. Strategy meets childhood nostalgia.</div>
-        <span class="game-tag">BOARD • MULTIPLAYER</span>
+        <div class="game-name">#5 Ular Tangga</div>
+        <div class="game-desc">Snakes & Ladders with power-ups. Strategy meets nostalgia.</div>
+        <span class="game-tag">BOARD</span>
       </div>
     </a>
   </div>
 
-  <div class="footer">Made with ❤️ in Indonesia • Works offline • No ads forced</div>
+  <div class="section-label">Volume 2 — Pain-Point Killers</div>
+  <div class="games">
+    <a class="game-card" href="lari-kreta.html">
+      <div class="game-icon i6">🏃</div>
+      <div class="game-info">
+        <div class="game-name">#6 Lari Kreta</div>
+        <div class="game-desc">Endless runner escaping Jakarta banjir. Evolving zones.</div>
+        <span class="game-tag">RUNNER</span>
+      </div>
+    </a>
+    <a class="game-card" href="blok-susun.html">
+      <div class="game-icon i7">🧊</div>
+      <div class="game-info">
+        <div class="game-name">#7 Blok Susun</div>
+        <div class="game-desc">Block puzzle. Fair RNG, undo system, city progression.</div>
+        <span class="game-tag">PUZZLE</span>
+      </div>
+    </a>
+    <a class="game-card" href="air-warna.html">
+      <div class="game-icon i8">🧪</div>
+      <div class="game-info">
+        <div class="game-name">#8 Air Warna</div>
+        <div class="game-desc">Color sort with colorblind support. Zero ads.</div>
+        <span class="game-tag">SORT</span>
+      </div>
+    </a>
+    <a class="game-card" href="gelembung.html">
+      <div class="game-icon i9">🫧</div>
+      <div class="game-info">
+        <div class="game-name">#9 Gelembung</div>
+        <div class="game-desc">Bubble shooter. Fair physics, no timer, Indonesian themes.</div>
+        <span class="game-tag">SHOOTER</span>
+      </div>
+    </a>
+    <a class="game-card" href="kata-kita.html">
+      <div class="game-icon i10">📝</div>
+      <div class="game-info">
+        <div class="game-name">#10 Kata Kita</div>
+        <div class="game-desc">Bilingual word puzzle EN/ID. Daily puzzles + blitz mode.</div>
+        <span class="game-tag">WORD</span>
+      </div>
+    </a>
+  </div>
+
+  <div class="footer">Made with ❤️ in Indonesia • Works offline • No forced ads • Pure HTML5</div>
 </div>
 </body>
 </html>

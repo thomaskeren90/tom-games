@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Air Warna</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(135deg,#0a1a2a,#0a2a1a);color:#fff;min-height:100vh;user-select:none}
+.top-bar{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:rgba(0,0,0,0.3)}
+.level-info{font-size:1.1em;font-weight:700;color:#4caf50}
+.moves-info{font-size:0.85em;color:#aaa}
+.game-area{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;padding:15px;min-height:60vh;align-content:flex-start}
+.tube{display:flex;flex-direction:column-reverse;gap:3px;padding:4px 6px;background:rgba(255,255,255,0.05);border:2px solid rgba(255,255,255,0.08);border-radius:0 0 10px 10px;cursor:pointer;transition:all 0.2s;position:relative;min-width:44px}
+.tube::before{content:'';position:absolute;top:-6px;left:-2px;right:-2px;height:6px;background:rgba(255,255,255,0.08);border-radius:3px 3px 0 0}
+.tube.selected{border-color:#4caf50;transform:translateY(-8px);box-shadow:0 8px 20px rgba(76,175,80,0.2)}
+.tube.pour-target{border-color:#ffd700;box-shadow:0 0 15px rgba(255,215,0,0.2)}
+.layer{width:32px;height:22px;border-radius:4px;transition:all 0.3s}
+.layer.pouring{animation:pour 0.3s ease}
+@keyframes pour{0%{transform:translateY(0)}50%{transform:translateY(-15px) scaleY(0.7)}100%{transform:translateY(0)}}
+.bottom{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;gap:10px;padding:12px;background:rgba(0,0,0,0.3)}
+.action-btn{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#fff;padding:8px 14px;border-radius:16px;font-size:0.75em;cursor:pointer}
+.action-btn:disabled{opacity:0.3;cursor:default}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:50;backdrop-filter:blur(5px)}
+.overlay-card{background:rgba(10,26,42,0.95);border:2px solid rgba(76,175,80,0.3);border-radius:20px;padding:28px;text-align:center;max-width:300px;width:90%}
+.overlay-card h1{margin-bottom:8px}
+.overlay-card p{color:#888;font-size:0.85em;margin:4px 0}
+.btn{background:linear-gradient(135deg,#4caf50,#2196f3);border:none;color:#fff;padding:12px 28px;border-radius:25px;font-size:1em;font-weight:700;cursor:pointer;margin-top:8px}
+.pattern-toggle{display:flex;gap:8px;justify-content:center;margin:10px 0}
+.toggle{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#aaa;padding:6px 12px;border-radius:12px;font-size:0.7em;cursor:pointer}
+.toggle.active{background:rgba(76,175,80,0.2);border-color:#4caf50;color:#4caf50}
+.colorblind-badge{position:fixed;top:50px;right:16px;font-size:0.65em;color:#4caf50;background:rgba(76,175,80,0.1);padding:3px 8px;border-radius:8px}
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <div class="level-info">Level <span id="level">1</span></div>
+  <div class="moves-info">Moves: <span id="moves">0</span></div>
+</div>
+<div class="colorblind-badge" id="cbBadge" style="display:none">♿ Colorblind Mode</div>
+
+<div class="game-area" id="gameArea"></div>
+
+<div class="pattern-toggle">
+  <button class="toggle" id="cbToggle" onclick="toggleColorblind()">♿ Colorblind</button>
+  <button class="toggle" id="undoBtn" onclick="undoMove()">↩️ Undo (<span id="undos">3</span>)</button>
+  <button class="action-btn" onclick="restartLevel()">🔄</button>
+</div>
+
+<div class="overlay" id="winOverlay" style="display:none">
+  <div class="overlay-card">
+    <h1>🎉 Beres!</h1>
+    <p>Level <span id="winLevel">1</span> selesai!</p>
+    <p>Moves: <span id="winMoves">0</span></p>
+    <button class="btn" onclick="nextLevel()">Level Selanjutnya →</button>
+  </div>
+</div>
+
+<div class="overlay" id="menuOverlay">
+  <div class="overlay-card">
+    <h1>🧪 Air Warna</h1>
+    <p>Urutkan warna ke dalam botol masing-masing. Tuang antar botol sampai setiap botol cuma satu warna.</p>
+    <p style="color:#555;font-size:0.75em">Tap botol sumber, lalu tap botol tujuan</p>
+    <button class="btn" onclick="startGame()">Mulai Main</button>
+  </div>
+</div>
+
+<script>
+const COLORS = [
+  {id:'red',hex:'#ef5350',pattern:'stripes'},
+  {id:'blue',hex:'#42a5f5',pattern:'dots'},
+  {id:'green',hex:'#66bb6a',pattern:'waves'},
+  {id:'yellow',hex:'#ffee58',pattern:'cross'},
+  {id:'purple',hex:'#ab47bc',pattern:'zigzag'},
+  {id:'orange',hex:'#ffa726',pattern:'diamonds'},
+  {id:'pink',hex:'#ec407a',pattern:'checker'},
+  {id:'cyan',hex:'#26c6da',pattern:'grid'},
+  {id:'lime',hex:'#9ccc65',pattern:'triangles'},
+  {id:'brown',hex:'#8d6e63',pattern:'hlines'},
+];
+
+let tubes, selected, level, moves, undos, history, colorblindMode;
+
+function init(lvl) {
+  level = lvl || 1;
+  selected = null;
+  moves = 0;
+  undos = 3;
+  history = [];
+  document.getElementById('level').textContent = level;
+  document.getElementById('moves').textContent = 0;
+  document.getElementById('undos').textContent = undos;
+
+  // Generate puzzle
+  const numColors = Math.min(4 + Math.floor(level / 3), 10);
+  const layersPerTube = Math.min(3 + Math.floor(level / 5), 5);
+  const numTubes = numColors + 2; // Always 2 empty tubes
+
+  let allLayers = [];
+  for (let i = 0; i < numColors; i++) {
+    for (let j = 0; j < layersPerTube; j++) {
+      allLayers.push(COLORS[i]);
+    }
+  }
+
+  // Shuffle
+  for (let i = allLayers.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [allLayers[i], allLayers[j]] = [allLayers[j], allLayers[i]];
+  }
+
+  // Distribute to tubes
+  tubes = [];
+  let idx = 0;
+  for (let t = 0; t < numColors; t++) {
+    const tube = [];
+    for (let l = 0; l < layersPerTube; l++) {
+      tube.push(allLayers[idx++]);
+    }
+    tubes.push(tube);
+  }
+  // Add empty tubes
+  tubes.push([]);
+  tubes.push([]);
+
+  renderTubes();
+}
+
+function startGame() {
+  document.getElementById('menuOverlay').style.display = 'none';
+  init(1);
+}
+
+function renderTubes() {
+  const area = document.getElementById('gameArea');
+  area.innerHTML = tubes.map((tube, i) => {
+    const maxLayers = Math.max(...tubes.map(t => t.length), 4);
+    let html = `<div class="tube ${selected===i?'selected':''}" onclick="tapTube(${i})" style="height:${maxLayers * 25 + 16}px">`;
+    for (let l = 0; l < tube.length; l++) {
+      const color = tube[l];
+      const pattern = colorblindMode ? getPatternSVG(color) : 'none';
+      html += `<div class="layer" style="background:${color.hex};${pattern?'background-image:'+pattern+';background-size:10px 10px':''}"></div>`;
+    }
+    html += '</div>';
+    return html;
+  }).join('');
+}
+
+function getPatternSVG(color) {
+  const p = color.pattern;
+  if (p === 'stripes') return `repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(0,0,0,0.2) 3px,rgba(0,0,0,0.2) 6px)`;
+  if (p === 'dots') return `radial-gradient(circle 2px at 5px 5px,rgba(255,255,255,0.4) 2px,transparent 2px)`;
+  if (p === 'waves') return `repeating-linear-gradient(0deg,transparent,transparent 4px,rgba(255,255,255,0.15) 4px,rgba(255,255,255,0.15) 8px)`;
+  if (p === 'cross') return `linear-gradient(rgba(255,255,255,0.2) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.2) 1px,transparent 1px)`;
+  if (p === 'zigzag') return `repeating-linear-gradient(135deg,transparent,transparent 3px,rgba(0,0,0,0.15) 3px,rgba(0,0,0,0.15) 6px)`;
+  if (p === 'diamonds') return `linear-gradient(45deg,rgba(255,255,255,0.15) 25%,transparent 25%,transparent 75%,rgba(255,255,255,0.15) 75%)`;
+  if (p === 'checker') return `repeating-conic-gradient(rgba(0,0,0,0.1) 0% 25%,transparent 0% 50%)`;
+  if (p === 'grid') return `linear-gradient(rgba(255,255,255,0.1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.1) 1px,transparent 1px)`;
+  if (p === 'triangles') return `linear-gradient(60deg,transparent 40%,rgba(255,255,255,0.2) 40%,rgba(255,255,255,0.2) 60%,transparent 60%)`;
+  if (p === 'hlines') return `repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,255,255,0.2) 3px,rgba(255,255,255,0.2) 6px)`;
+  return 'none';
+}
+
+function tapTube(i) {
+  if (selected === null) {
+    if (tubes[i].length === 0) return;
+    selected = i;
+    renderTubes();
+  } else if (selected === i) {
+    selected = null;
+    renderTubes();
+  } else {
+    pour(selected, i);
+  }
+}
+
+function pour(from, to) {
+  if (!canPour(from, to)) {
+    // Maybe select the new tube instead
+    if (tubes[to].length > 0) {
+      selected = to;
+      renderTubes();
+    } else {
+      selected = null;
+      renderTubes();
+    }
+    return;
+  }
+
+  // Save history
+  history.push({
+    tubes: tubes.map(t => [...t]),
+    moves, undos
+  });
+  if (history.length > 20) history.shift();
+
+  // Pour all consecutive same-color layers
+  const color = tubes[from][tubes[from].length - 1];
+  let poured = 0;
+  while (tubes[from].length > 0 &&
+         tubes[from][tubes[from].length - 1] === color &&
+         (tubes[to].length === 0 || tubes[to].length < 5)) {
+    tubes[to].push(tubes[from].pop());
+    poured++;
+    if (tubes[to].length >= 5) break; // Max tube capacity
+  }
+
+  moves++;
+  selected = null;
+  document.getElementById('moves').textContent = moves;
+
+  renderTubes();
+
+  // Check win
+  if (checkWin()) {
+    setTimeout(() => {
+      document.getElementById('winLevel').textContent = level;
+      document.getElementById('winMoves').textContent = moves;
+      document.getElementById('winOverlay').style.display = 'flex';
+    }, 400);
+  }
+}
+
+function canPour(from, to) {
+  if (tubes[from].length === 0) return false;
+  if (tubes[to].length >= 5) return false;
+  if (tubes[to].length === 0) return true;
+  const fromColor = tubes[from][tubes[from].length - 1];
+  const toColor = tubes[to][tubes[to].length - 1];
+  return fromColor === toColor;
+}
+
+function checkWin() {
+  return tubes.every(tube => {
+    if (tube.length === 0) return true;
+    return tube.length >= 3 && tube.every(l => l === tube[0]);
+  });
+}
+
+function undoMove() {
+  if (history.length === 0 || undos <= 0) return;
+  const prev = history.pop();
+  tubes = prev.tubes;
+  moves = prev.moves;
+  undos--;
+  document.getElementById('moves').textContent = moves;
+  document.getElementById('undos').textContent = undos;
+  renderTubes();
+}
+
+function nextLevel() {
+  document.getElementById('winOverlay').style.display = 'none';
+  init(level + 1);
+}
+
+function restartLevel() {
+  init(level);
+}
+
+function toggleColorblind() {
+  colorblindMode = !colorblindMode;
+  document.getElementById('cbToggle').classList.toggle('active');
+  document.getElementById('cbBadge').style.display = colorblindMode ? 'block' : 'none';
+  renderTubes();
+}
+
+colorblindMode = false;
+</script>
+</body>
+</html>

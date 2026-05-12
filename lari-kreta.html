@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Lari Kreta</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0a1628;overflow:hidden;height:100vh;user-select:none;touch-action:none}
+canvas{display:block;margin:0 auto}
+.ui{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;pointer-events:none;z-index:10}
+.score{font-size:1.3em;font-weight:900;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,0.5)}
+.coins-display{font-size:0.9em;color:#ffd700}
+.zone-name{position:fixed;bottom:16px;left:0;right:0;text-align:center;color:rgba(255,255,255,0.25);font-size:0.7em;pointer-events:none;z-index:10}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:20;backdrop-filter:blur(5px)}
+.overlay-card{background:rgba(10,22,40,0.95);border:2px solid rgba(0,188,212,0.3);border-radius:20px;padding:28px;text-align:center;max-width:300px;width:90%}
+.overlay-card h1{font-size:1.5em;margin-bottom:5px}
+.overlay-card .emoji{font-size:3em;margin-bottom:8px}
+.overlay-card p{color:#888;font-size:0.8em;margin:4px 0;line-height:1.4}
+.final-score{font-size:2.5em;font-weight:900;color:#00bcd4;margin:8px 0}
+.stats-row{display:flex;justify-content:center;gap:15px;margin:10px 0}
+.stat{font-size:0.75em;color:#aaa}
+.stat span{color:#00bcd4;font-weight:700}
+.btn{background:linear-gradient(135deg,#00b09b,#96c93d);border:none;color:#fff;padding:12px 28px;border-radius:25px;font-size:1em;font-weight:700;cursor:pointer;margin-top:8px}
+.char-select{display:flex;gap:8px;justify-content:center;margin:12px 0;flex-wrap:wrap}
+.char{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4em;cursor:pointer;background:rgba(255,255,255,0.06);border:2px solid transparent;transition:all 0.2s}
+.char.active{border-color:#00bcd4;background:rgba(0,188,212,0.15)}
+.char.locked{opacity:0.3;cursor:default}
+.unlock-info{font-size:0.65em;color:#666;margin-top:2px}
+</style>
+</head>
+<body>
+<div class="ui">
+  <div class="score" id="score">0</div>
+  <div class="coins-display">🪙 <span id="coins">0</span></div>
+</div>
+<canvas id="c"></canvas>
+<div class="zone-name" id="zoneName">🏙️ Jalanan Jakarta</div>
+
+<div class="overlay" id="menuOverlay">
+  <div class="overlay-card">
+    <div class="emoji">🏃</div>
+    <h1>Lari Kreta</h1>
+    <p>Lari dari banjir! Kumpulin koin, hindari rintangan.</p>
+    <p style="color:#555;font-size:0.7em">Swipe kiri/kanan atas/bawah • Tap untuk mulai</p>
+    <div class="char-select" id="charSelect"></div>
+    <button class="btn" onclick="startGame()">🏃 Lari!</button>
+  </div>
+</div>
+
+<div class="overlay" id="gameOverOverlay" style="display:none">
+  <div class="overlay-card">
+    <div class="emoji">💀</div>
+    <h1>Kena Banjir!</h1>
+    <div class="final-score" id="finalScore">0</div>
+    <div class="stats-row">
+      <div class="stat">🪙 <span id="earnedCoins">0</span> koin</div>
+      <div class="stat">🏃 <span id="distance">0</span>m</div>
+      <div class="stat">🏆 Best: <span id="best">0</span></div>
+    </div>
+    <p id="newBest" style="color:#ffd700;display:none">🏆 Rekor Baru!</p>
+    <button class="btn" onclick="startGame()">Coba Lagi</button>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+// Constants
+const LANE_COUNT = 3;
+const PLAYER_W = 36, PLAYER_H = 50;
+const OBSTACLE_TYPES = {
+  train: {w:50,h:80,emoji:'🚃',color:'#555'},
+  barrier: {w:60,h:30,emoji:'🚧',color:'#ff9800'},
+  motorcycle: {w:35,h:40,emoji:'🏍️',color:'#e91e63'},
+  cart: {w:45,h:35,emoji:'🛒',color:'#795548'},
+  puddle: {w:50,h:20,emoji:'💧',color:'#2196f3'},
+};
+
+const ZONES = [
+  {name:'🏙️ Jalanan Jakarta',sky1:'#0a1628',sky2:'#1a3a5c',ground:'#2a2a2a',obstacleColor:'#555',speed:1},
+  {name:'🌴 Hutan Kalimantan',sky1:'#0a2818',sky2:'#1a5c3a',ground:'#2a3a1a',obstacleColor:'#3a5a2a',speed:1.1},
+  {name:'🏖️ Pantai Bali',sky1:'#0a2838',sky2:'#1a5c7c',ground:'#3a2a1a',obstacleColor:'#5a3a1a',speed:1.2},
+  {name:'🌋 Gunung Bromo',sky1:'#1a0a00',sky2:'#5c2a0a',ground:'#2a1a0a',obstacleColor:'#4a2a0a',speed:1.3},
+  {name:'🚀 Luar Angkasa',sky1:'#0a001a',sky2:'#1a003a',ground:'#0a0020',obstacleColor:'#3a006a',speed:1.5},
+];
+
+const CHARACTERS = [
+  {emoji:'🏃',name:'Pelari',unlock:0},
+  {emoji:'🧑‍🎓',name:'Mahasiswa',unlock:500},
+  {emoji:'👷',name:'Tukang',unlock:1500},
+  {emoji:'🧑‍🍳',name:'Chef',unlock:3000},
+  {emoji:'🦸',name:'Pahlawan',unlock:5000},
+  {emoji:'👑',name:'Raja',unlock:10000},
+];
+
+let state, player, obstacles, coins, laneWidth, frameCount, gameRunning, selectedChar;
+let totalCoins = parseInt(localStorage.getItem('lari-coins')) || 0;
+let bestScore = parseInt(localStorage.getItem('lari-best')) || 0;
+
+function resize() {
+  canvas.width = Math.min(window.innerWidth, 420);
+  canvas.height = window.innerHeight;
+  laneWidth = canvas.width / LANE_COUNT;
+}
+resize();
+window.addEventListener('resize', resize);
+
+function init() {
+  player = {
+    lane: 1,
+    x: 0, y: 0,
+    targetX: 0,
+    vy: 0, jumping: false, sliding: false,
+    slideTimer: 0
+  };
+  obstacles = [];
+  coins = [];
+  state = {
+    score: 0, distance: 0, coinsEarned: 0,
+    speed: 3, zoneIndex: 0, zoneProgress: 0,
+    invincible: 0
+  };
+  frameCount = 0;
+  updateLanePos();
+  document.getElementById('score').textContent = '0';
+  document.getElementById('coins').textContent = totalCoins;
+}
+
+function updateLanePos() {
+  player.targetX = player.lane * laneWidth + laneWidth/2 - PLAYER_W/2;
+  player.y = canvas.height - 130 - PLAYER_H;
+}
+
+function startGame() {
+  document.getElementById('menuOverlay').style.display = 'none';
+  document.getElementById('gameOverOverlay').style.display = 'none';
+  init();
+  gameRunning = true;
+  requestAnimationFrame(loop);
+}
+
+function renderCharSelect() {
+  const el = document.getElementById('charSelect');
+  el.innerHTML = CHARACTERS.map((c,i) => {
+    const locked = totalCoins < c.unlock;
+    return `<div>
+      <div class="char ${i===selectedChar?'active':''} ${locked?'locked':''}" 
+           onclick="${locked?'':`selectChar(${i})`}">${c.emoji}</div>
+      <div class="unlock-info">${c.unlock>0?c.unlock:'✓'}</div>
+    </div>`;
+  }).join('');
+}
+
+function selectChar(i) {
+  selectedChar = i;
+  renderCharSelect();
+}
+
+selectedChar = 0;
+renderCharSelect();
+
+function loop() {
+  if (!gameRunning) return;
+  frameCount++;
+
+  const speedMult = ZONES[state.zoneIndex].speed;
+
+  // Player smooth movement
+  player.x += (player.targetX - player.x) * 0.2;
+
+  // Jump physics
+  if (player.jumping) {
+    player.vy += 0.5;
+    player.y += player.vy;
+    if (player.y >= canvas.height - 130 - PLAYER_H) {
+      player.y = canvas.height - 130 - PLAYER_H;
+      player.jumping = false;
+      player.vy = 0;
+    }
+  }
+
+  // Slide timer
+  if (player.sliding) {
+    player.slideTimer--;
+    if (player.slideTimer <= 0) player.sliding = false;
+  }
+
+  // Spawn obstacles
+  if (frameCount % Math.max(30, 70 - state.speed * 5) === 0) {
+    const types = Object.keys(OBSTACLE_TYPES);
+    const type = types[Math.floor(Math.random() * types.length)];
+    const lane = Math.floor(Math.random() * LANE_COUNT);
+    obstacles.push({
+      x: lane * laneWidth + laneWidth/2 - OBSTACLE_TYPES[type].w/2,
+      y: -OBSTACLE_TYPES[type].h,
+      type, lane,
+      ...OBSTACLE_TYPES[type]
+    });
+  }
+
+  // Spawn coins
+  if (frameCount % 45 === 0) {
+    const lane = Math.floor(Math.random() * LANE_COUNT);
+    coins.push({
+      x: lane * laneWidth + laneWidth/2 - 10,
+      y: -20, collected: false
+    });
+  }
+
+  // Move obstacles
+  obstacles.forEach(o => o.y += state.speed * speedMult);
+  coins.forEach(c => c.y += state.speed * speedMult);
+
+  // Remove off-screen
+  obstacles = obstacles.filter(o => o.y < canvas.height);
+  coins = coins.filter(c => c.y < canvas.height && !c.collected);
+
+  // Collision check
+  const px = player.x, py = player.y;
+  const playerH = player.sliding ? PLAYER_H * 0.4 : PLAYER_H;
+  const playerY = player.sliding ? player.y + PLAYER_H * 0.6 : player.y;
+
+  for (const o of obstacles) {
+    if (state.invincible > 0) continue;
+    if (px + PLAYER_W > o.x + 5 && px < o.x + o.w - 5 &&
+        playerY + playerH > o.y + 5 && playerY < o.y + o.h - 5) {
+      gameOver();
+      return;
+    }
+  }
+
+  // Collect coins
+  coins.forEach(c => {
+    if (c.collected) return;
+    if (px + PLAYER_W > c.x && px < c.x + 20 &&
+        playerY + playerH > c.y && playerY < c.y + 20) {
+      c.collected = true;
+      state.coinsEarned++;
+    }
+  });
+
+  // Score & zone
+  state.score += Math.floor(state.speed);
+  state.distance += state.speed * 0.1;
+  state.speed += 0.002;
+  state.zoneProgress += state.speed * 0.1;
+  if (state.invincible > 0) state.invincible--;
+
+  // Zone transition
+  if (state.zoneProgress > 500 && state.zoneIndex < ZONES.length - 1) {
+    state.zoneIndex++;
+    state.zoneProgress = 0;
+    document.getElementById('zoneName').textContent = ZONES[state.zoneIndex].name;
+  }
+
+  document.getElementById('score').textContent = state.score;
+  document.getElementById('coins').textContent = totalCoins + state.coinsEarned;
+
+  draw();
+  requestAnimationFrame(loop);
+}
+
+function draw() {
+  const zone = ZONES[state.zoneIndex];
+
+  // Sky
+  const grad = ctx.createLinearGradient(0,0,0,canvas.height);
+  grad.addColorStop(0, zone.sky1);
+  grad.addColorStop(1, zone.sky2);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // Ground
+  ctx.fillStyle = zone.ground;
+  ctx.fillRect(0, canvas.height-130, canvas.width, 130);
+
+  // Lane lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for (let i = 1; i < LANE_COUNT; i++) {
+    ctx.beginPath();
+    ctx.moveTo(i * laneWidth, 0);
+    ctx.lineTo(i * laneWidth, canvas.height);
+    ctx.stroke();
+  }
+
+  // Road markings (animated)
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  for (let y = (frameCount * 2) % 40 - 40; y < canvas.height; y += 40) {
+    ctx.fillRect(canvas.width/2 - 2, y, 4, 20);
+  }
+
+  // Coins
+  coins.forEach(c => {
+    if (c.collected) return;
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath();
+    ctx.arc(c.x + 10, c.y + 10, 10, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = '#ffab00';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🪙', c.x + 10, c.y + 14);
+  });
+
+  // Obstacles
+  obstacles.forEach(o => {
+    ctx.fillStyle = o.color;
+    ctx.globalAlpha = 0.9;
+    ctx.fillRect(o.x, o.y, o.w, o.h);
+    ctx.globalAlpha = 1;
+    ctx.font = `${Math.min(o.w,o.h) * 0.7}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(o.emoji, o.x + o.w/2, o.y + o.h * 0.7);
+  });
+
+  // Player
+  ctx.save();
+  ctx.translate(player.x + PLAYER_W/2, player.y + PLAYER_H/2);
+
+  // Invincibility flash
+  if (state.invincible > 0 && frameCount % 4 < 2) {
+    ctx.globalAlpha = 0.5;
+  }
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath();
+  ctx.ellipse(0, PLAYER_H/2 + 5, PLAYER_W/2, 6, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Character
+  const charEmoji = CHARACTERS[selectedChar || 0].emoji;
+  if (player.sliding) {
+    ctx.rotate(Math.PI/6);
+    ctx.scale(1, 0.6);
+  }
+  ctx.font = `${PLAYER_H * 0.8}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(charEmoji, 0, 0);
+
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
+function gameOver() {
+  gameRunning = false;
+  totalCoins += state.coinsEarned;
+  localStorage.setItem('lari-coins', totalCoins);
+
+  const isNewBest = state.score > bestScore;
+  if (isNewBest) {
+    bestScore = state.score;
+    localStorage.setItem('lari-best', bestScore);
+  }
+
+  document.getElementById('finalScore').textContent = state.score;
+  document.getElementById('earnedCoins').textContent = state.coinsEarned;
+  document.getElementById('distance').textContent = Math.floor(state.distance);
+  document.getElementById('best').textContent = bestScore;
+  document.getElementById('newBest').style.display = isNewBest ? 'block' : 'none';
+
+  renderCharSelect();
+
+  setTimeout(() => {
+    document.getElementById('gameOverOverlay').style.display = 'flex';
+  }, 300);
+}
+
+// Controls
+let touchStartX, touchStartY;
+document.addEventListener('touchstart', e => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+});
+document.addEventListener('touchend', e => {
+  if (!touchStartX) return;
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  const absDx = Math.abs(dx), absDy = Math.abs(dy);
+
+  if (Math.max(absDx, absDy) < 20) return;
+
+  if (absDx > absDy) {
+    // Horizontal swipe
+    if (dx > 0 && player.lane < LANE_COUNT - 1) player.lane++;
+    else if (dx < 0 && player.lane > 0) player.lane--;
+    updateLanePos();
+  } else {
+    // Vertical swipe
+    if (dy < 0 && !player.jumping) {
+      // Jump
+      player.jumping = true;
+      player.vy = -12;
+    } else if (dy > 0 && !player.sliding) {
+      // Slide
+      player.sliding = true;
+      player.slideTimer = 30;
+    }
+  }
+  touchStartX = touchStartY = null;
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft' && player.lane > 0) { player.lane--; updateLanePos(); }
+  if (e.key === 'ArrowRight' && player.lane < LANE_COUNT-1) { player.lane++; updateLanePos(); }
+  if (e.key === 'ArrowUp' && !player.jumping) { player.jumping = true; player.vy = -12; }
+  if (e.key === 'ArrowDown' && !player.sliding) { player.sliding = true; player.slideTimer = 30; }
+});
+
+init();
+</script>
+</body>
+</html>

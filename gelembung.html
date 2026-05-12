@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Gelembung</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(135deg,#0a2818,#0a1828);overflow:hidden;height:100vh;user-select:none;touch-action:none}
+canvas{display:block;margin:0 auto}
+.ui{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;pointer-events:none;z-index:10}
+.score{font-size:1.2em;font-weight:900;color:#fff}
+.level-badge{font-size:0.8em;color:#96c93d;background:rgba(150,201,61,0.15);padding:3px 10px;border-radius:12px}
+.aim-line{position:fixed;bottom:80px;left:0;right:0;text-align:center;font-size:0.7em;color:rgba(255,255,255,0.3);pointer-events:none}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:20;backdrop-filter:blur(5px)}
+.overlay-card{background:rgba(10,40,24,0.95);border:2px solid rgba(150,201,61,0.3);border-radius:20px;padding:28px;text-align:center;max-width:300px;width:90%}
+.overlay-card h1{font-size:1.5em;margin-bottom:5px}
+.overlay-card .emoji{font-size:3em;margin-bottom:8px}
+.overlay-card p{color:#888;font-size:0.8em;margin:4px 0}
+.final-score{font-size:2em;font-weight:900;color:#96c93d;margin:8px 0}
+.btn{background:linear-gradient(135deg,#00b09b,#96c93d);border:none;color:#fff;padding:12px 28px;border-radius:25px;font-size:1em;font-weight:700;cursor:pointer;margin-top:8px}
+.theme-name{position:fixed;bottom:16px;left:0;right:0;text-align:center;color:rgba(255,255,255,0.2);font-size:0.65em;pointer-events:none}
+</style>
+</head>
+<body>
+<div class="ui">
+  <div class="score">Score: <span id="score">0</span></div>
+  <div class="level-badge">Lv. <span id="level">1</span></div>
+</div>
+<canvas id="c"></canvas>
+<div class="theme-name" id="themeName">🌊 Laut Jawa</div>
+
+<div class="overlay" id="menuOverlay">
+  <div class="overlay-card">
+    <div class="emoji">🫧</div>
+    <h1>Gelembung</h1>
+    <p>Pecahkan gelembung! Cocokkan 3+ warna untuk pop.</p>
+    <p style="color:#555;font-size:0.7em">Tap untuk tembak. Garis bantu menunjukkan arah.</p>
+    <button class="btn" onclick="startGame()">🫧 Main!</button>
+  </div>
+</div>
+
+<div class="overlay" id="winOverlay" style="display:none">
+  <div class="overlay-card">
+    <div class="emoji">🎊</div>
+    <h1>Level Beres!</h1>
+    <p>Score: <span id="winScore">0</span></p>
+    <button class="btn" onclick="nextLevel()">Next Level →</button>
+  </div>
+</div>
+
+<div class="overlay" id="gameOverOverlay" style="display:none">
+  <div class="overlay-card">
+    <div class="emoji">😢</div>
+    <h1>Gelembung Sampai Bawah!</h1>
+    <div class="final-score" id="finalScore">0</div>
+    <button class="btn" onclick="startGame()">Coba Lagi</button>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+const BUBBLE_R = 16;
+const COLS = 11;
+const ROW_HEIGHT = BUBBLE_R * 2 * 0.866;
+const COLORS = ['#ef5350','#42a5f5','#66bb6a','#ffee58','#ab47bc','#ffa726'];
+const THEMES = [
+  {name:'🌊 Laut Jawa',bg1:'#0a2818',bg2:'#0a1828'},
+  {name:'🌴 Hutan Sumatera',bg1:'#0a280a',bg2:'#1a3a0a'},
+  {name:'🏖️ Pantai Lombok',bg1:'#0a2838',bg2:'#1a4a5c'},
+  {name:'🌋 Kawah Ijen',bg1:'#1a0a00',bg2:'#3a1a0a'},
+  {name:'🏯 Candi Prambanan',bg1:'#1a0a28',bg2:'#2a1a3a'},
+];
+
+let bubbles, shooter, nextBubble, score, level, gameRunning, aimAngle, rowOffset;
+
+function resize() {
+  canvas.width = Math.min(window.innerWidth, 420);
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+function init() {
+  bubbles = [];
+  score = 0;
+  level = level || 1;
+  aimAngle = -Math.PI/2;
+  rowOffset = 0;
+
+  // Generate initial rows
+  const numRows = 5 + Math.floor(level / 2);
+  const numColors = Math.min(3 + Math.floor(level / 3), COLORS.length);
+  for (let r = 0; r < numRows; r++) {
+    const cols = r % 2 === 0 ? COLS : COLS - 1;
+    for (let c = 0; c < cols; c++) {
+      const x = c * BUBBLE_R * 2 + BUBBLE_R + (r % 2 === 1 ? BUBBLE_R : 0);
+      const y = r * ROW_HEIGHT + BUBBLE_R + 40;
+      bubbles.push({
+        x, y,
+        color: COLORS[Math.floor(Math.random() * numColors)],
+        r: BUBBLE_R,
+        row: r, col: c
+      });
+    }
+  }
+
+  nextBubble = createShooterBubble(numColors);
+  shooter = {
+    x: canvas.width / 2,
+    y: canvas.height - 60,
+    ...createShooterBubble(numColors)
+  };
+
+  document.getElementById('score').textContent = 0;
+  document.getElementById('level').textContent = level;
+  updateTheme();
+}
+
+function createShooterBubble(numColors) {
+  return {color: COLORS[Math.floor(Math.random() * numColors)]};
+}
+
+function updateTheme() {
+  const theme = THEMES[(level - 1) % THEMES.length];
+  document.getElementById('themeName').textContent = theme.name;
+}
+
+function startGame() {
+  document.getElementById('menuOverlay').style.display = 'none';
+  document.getElementById('gameOverOverlay').style.display = 'none';
+  document.getElementById('winOverlay').style.display = 'none';
+  level = 1;
+  init();
+  gameRunning = true;
+  requestAnimationFrame(loop);
+}
+
+function nextLevel() {
+  document.getElementById('winOverlay').style.display = 'none';
+  level++;
+  init();
+  gameRunning = true;
+  requestAnimationFrame(loop);
+}
+
+let shooting = false, shootDx = 0, shootDy = 0;
+let shootBubble = null;
+
+function loop() {
+  if (!gameRunning) return;
+
+  // Move shooting bubble
+  if (shootBubble) {
+    shootBubble.x += shootDx;
+    shootBubble.y += shootDy;
+
+    // Wall bounce
+    if (shootBubble.x - BUBBLE_R < 0 || shootBubble.x + BUBBLE_R > canvas.width) {
+      shootDx = -shootDx;
+      shootBubble.x = Math.max(BUBBLE_R, Math.min(canvas.width - BUBBLE_R, shootBubble.x));
+    }
+
+    // Top wall
+    if (shootBubble.y - BUBBLE_R < 0) {
+      snapBubble(shootBubble);
+      shootBubble = null;
+    }
+
+    // Collision with existing bubbles
+    if (shootBubble) {
+      for (const b of bubbles) {
+        const dx = shootBubble.x - b.x;
+        const dy = shootBubble.y - b.y;
+        if (Math.sqrt(dx*dx + dy*dy) < BUBBLE_R * 1.8) {
+          snapBubble(shootBubble);
+          shootBubble = null;
+          break;
+        }
+      }
+    }
+
+    // Bottom = game over
+    if (shootBubble && shootBubble.y + BUBBLE_R > canvas.height - 100) {
+      // Check if any bubble is too low
+    }
+  }
+
+  // Check game over
+  for (const b of bubbles) {
+    if (b.y + BUBBLE_R > canvas.height - 100) {
+      gameOver();
+      return;
+    }
+  }
+
+  // Check win
+  if (bubbles.length === 0) {
+    winLevel();
+    return;
+  }
+
+  draw();
+  requestAnimationFrame(loop);
+}
+
+function snapBubble(b) {
+  // Find nearest grid position
+  let bestDist = Infinity, bestR = 0, bestC = 0;
+  for (let r = 0; r < 30; r++) {
+    const cols = r % 2 === 0 ? COLS : COLS - 1;
+    for (let c = 0; c < cols; c++) {
+      const x = c * BUBBLE_R * 2 + BUBBLE_R + (r % 2 === 1 ? BUBBLE_R : 0);
+      const y = r * ROW_HEIGHT + BUBBLE_R + 40;
+      const dx = b.x - x, dy = b.y - y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestR = r;
+        bestC = c;
+      }
+    }
+  }
+
+  const snapX = bestC * BUBBLE_R * 2 + BUBBLE_R + (bestR % 2 === 1 ? BUBBLE_R : 0);
+  const snapY = bestR * ROW_HEIGHT + BUBBLE_R + 40;
+
+  const newBubble = {x: snapX, y: snapY, color: b.color, r: BUBBLE_R, row: bestR, col: bestC};
+  bubbles.push(newBubble);
+
+  // Check matches
+  const matches = findMatches(newBubble);
+  if (matches.length >= 3) {
+    // Remove matched
+    bubbles = bubbles.filter(b => !matches.includes(b));
+    score += matches.length * 10;
+    document.getElementById('score').textContent = score;
+
+    // Remove floating
+    removeFloating();
+  }
+}
+
+function findMatches(bubble) {
+  const visited = new Set();
+  const matches = [];
+
+  function search(b) {
+    if (visited.has(b)) return;
+    visited.add(b);
+    matches.push(b);
+
+    for (const other of bubbles) {
+      if (other === b || other.color !== bubble.color) continue;
+      const dx = b.x - other.x;
+      const dy = b.y - other.y;
+      if (Math.sqrt(dx*dx + dy*dy) < BUBBLE_R * 2.2) {
+        search(other);
+      }
+    }
+  }
+
+  search(bubble);
+  return matches;
+}
+
+function removeFloating() {
+  // BFS from top row
+  const connected = new Set();
+  const queue = bubbles.filter(b => b.row <= 0);
+  queue.forEach(b => connected.add(b));
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    for (const b of bubbles) {
+      if (connected.has(b)) continue;
+      const dx = current.x - b.x;
+      const dy = current.y - b.y;
+      if (Math.sqrt(dx*dx + dy*dy) < BUBBLE_R * 2.2) {
+        connected.add(b);
+        queue.push(b);
+      }
+    }
+  }
+
+  const floating = bubbles.filter(b => !connected.has(b));
+  score += floating.length * 20;
+  document.getElementById('score').textContent = score;
+  bubbles = bubbles.filter(b => connected.has(b));
+}
+
+function draw() {
+  const theme = THEMES[(level - 1) % THEMES.length];
+  const grad = ctx.createLinearGradient(0,0,0,canvas.height);
+  grad.addColorStop(0, theme.bg1);
+  grad.addColorStop(1, theme.bg2);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // Bubbles
+  bubbles.forEach(b => {
+    drawBubble(b.x, b.y, b.color);
+  });
+
+  // Shooting bubble
+  if (shootBubble) {
+    drawBubble(shootBubble.x, shootBubble.y, shootBubble.color);
+  }
+
+  // Shooter
+  drawBubble(shooter.x, shooter.y, shooter.color);
+
+  // Next bubble preview
+  drawBubble(shooter.x - 40, shooter.y + 5, nextBubble.color, 0.6);
+
+  // Aim line
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([5, 10]);
+  ctx.beginPath();
+  ctx.moveTo(shooter.x, shooter.y);
+  const lineLen = 200;
+  ctx.lineTo(
+    shooter.x + Math.cos(aimAngle) * lineLen,
+    shooter.y + Math.sin(aimAngle) * lineLen
+  );
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Bounce preview
+  let lx = shooter.x, ly = shooter.y;
+  let ldx = Math.cos(aimAngle) * 10, ldy = Math.sin(aimAngle) * 10;
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.beginPath();
+  ctx.moveTo(lx, ly);
+  for (let i = 0; i < 50; i++) {
+    lx += ldx; ly += ldy;
+    if (lx < BUBBLE_R || lx > canvas.width - BUBBLE_R) {
+      ldx = -ldx;
+      ctx.lineTo(lx, ly);
+    }
+    if (ly < 0) break;
+  }
+  ctx.lineTo(lx, ly);
+  ctx.stroke();
+}
+
+function drawBubble(x, y, color, alpha) {
+  ctx.globalAlpha = alpha || 1;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(x, y, BUBBLE_R, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Shine
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.beginPath();
+  ctx.arc(x - 4, y - 4, BUBBLE_R * 0.35, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+function shoot() {
+  if (shootBubble) return; // Already shooting
+
+  const numColors = Math.min(3 + Math.floor(level / 3), COLORS.length);
+  shootBubble = {color: shooter.color, x: shooter.x, y: shooter.y};
+  shootDx = Math.cos(aimAngle) * 8;
+  shootDy = Math.sin(aimAngle) * 8;
+
+  shooter.color = nextBubble.color;
+  nextBubble = createShooterBubble(numColors);
+}
+
+function winLevel() {
+  gameRunning = false;
+  document.getElementById('winScore').textContent = score;
+  document.getElementById('winOverlay').style.display = 'flex';
+}
+
+function gameOver() {
+  gameRunning = false;
+  document.getElementById('finalScore').textContent = score;
+  setTimeout(() => {
+    document.getElementById('gameOverOverlay').style.display = 'flex';
+  }, 300);
+}
+
+// Controls
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const tx = e.touches[0].clientX - rect.left;
+  const ty = e.touches[0].clientY - rect.top;
+  aimAngle = Math.atan2(ty - shooter.y, tx - shooter.x);
+  if (aimAngle > -0.1) aimAngle = -0.1;
+  if (aimAngle < -Math.PI + 0.1) aimAngle = -Math.PI + 0.1;
+  draw();
+});
+
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  shoot();
+});
+
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  aimAngle = Math.atan2(my - shooter.y, mx - shooter.x);
+  if (aimAngle > -0.1) aimAngle = -0.1;
+  if (aimAngle < -Math.PI + 0.1) aimAngle = -Math.PI + 0.1;
+  draw();
+});
+
+canvas.addEventListener('click', e => {
+  shoot();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft') { aimAngle = Math.max(aimAngle - 0.05, -Math.PI + 0.1); draw(); }
+  if (e.key === 'ArrowRight') { aimAngle = Math.min(aimAngle + 0.05, -0.1); draw(); }
+  if (e.key === ' ' || e.key === 'ArrowUp') { e.preventDefault(); shoot(); }
+});
+
+init();
+</script>
+</body>
+</html>
